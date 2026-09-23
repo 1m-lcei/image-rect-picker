@@ -3,20 +3,9 @@
 
   <h1>Image Rect Picker</h1>
 
-  <p><strong>Precise image regions. Coordinates in your format.</strong><br>
-  Your images stay in your browser. Nothing is uploaded or saved.</p>
-
-  <p>
-    <a href="#features">Features</a>
-    ·
-    <a href="#output-format">Output format</a>
-    ·
-    <a href="#supported-images">Supported images</a>
-    ·
-    <a href="LICENSE">MIT License</a>
-  </p>
-
-  <br>
+  <p><strong>Precise image regions. Coordinates in your format.</strong></p>
+  
+  <p>Your images stay in your browser. Nothing is uploaded or saved.</p>
 </div>
 
 <hr>
@@ -27,9 +16,9 @@ Select a rectangular region in an image and copy its coordinates in your preferr
 
 - Open an image or drag and drop it into the workspace.
 - Draw, move, and resize a selection with a mouse, touch, or pen.
-- Enter coordinates directly, or use arrow keys for 1-pixel adjustments and Shift + arrow keys for 10 pixels.
+- Enter coordinates directly, or use arrow keys for 1-pixel adjustments and `Shift` + `arrow` keys for 10 pixels.
 - Zoom around the cursor, fit the whole image, or view it at 100%. Coordinates always refer to the original image.
-- Pan with Space + drag, the middle mouse button, or the Pan mode button. Resize handles stay centered on each visible edge.
+- Pan with `Space` + drag, the middle mouse button, or the Pan mode button. Resize handles stay centered on each visible edge.
 - Toggle light and dark with the top-right button, or choose System, Light, or Dark from the menu.
 - Customize the output template and copy the result.
 - Replace or clear the image while keeping your template. Reloading the page resets everything.
@@ -55,5 +44,3 @@ Coordinates are whole pixels measured from the image's top-left corner. You can 
 ## Supported images
 
 PNG, JPEG, WebP, GIF, and BMP, up to **20 MiB** and **50 megapixels**. One image and one selection at a time. SVG is not supported.
-
-[MIT License](LICENSE)
