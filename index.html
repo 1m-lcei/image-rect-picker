@@ -139,17 +139,20 @@
       <p class="hint">座標は画像の原寸ピクセルです。右端・下端は範囲に含まない境界で、x2 = x + 幅、y2 = y + 高さです。テーマと出力テンプレートはこのブラウザに保存されます。画像はページを閉じると消えます。</p>
     </dialog>
     <dialog id="about-dialog" aria-labelledby="about-title" closedby="any">
-      <h2 id="about-title" class="dialog-title">このサイトについて</h2>
+      <h2 id="about-title" class="visually-hidden">このサイトについて</h2>
       <div class="about-content">
         <svg class="about-mark" aria-hidden="true"><use href="/favicon.svg#app-icon" /></svg>
-        <p class="about-name">Image Rect Picker</p>
-        <p>画像上の範囲を選び、原寸の座標とサイズを好きな形式でコピーできるツールです。</p>
-        <p class="hint">画像の処理はブラウザ内で完結します。</p>
+        <p class="about-name">画像領域ピッカー</p>
       </div>
       <nav class="about-links" aria-label="連絡先とソースコード">
-        <a href="https://x.com/1m_lcei" target="_blank" rel="noopener noreferrer">連絡先（X）</a>
-        <!-- GitHubの公開後にリンクへ置き換える -->
-        <span class="link-placeholder">GitHub（準備中）</span>
+        <a href="https://x.com/1m_lcei" target="_blank" rel="noopener noreferrer">
+          <svg class="link-icon" aria-hidden="true"><use href="/icons.svg#x" /></svg>
+          連絡先
+        </a>
+        <a href="https://github.com/1m-lcei/image-rect-picker" target="_blank" rel="noopener noreferrer">
+          <svg class="link-icon" aria-hidden="true"><use href="/icons.svg#github" /></svg>
+          GitHub
+        </a>
       </nav>
     </dialog>
     <script type="module" src="/src/main.ts"></script>

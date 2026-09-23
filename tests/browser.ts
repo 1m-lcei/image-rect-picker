@@ -341,6 +341,10 @@ try {
       await page.keyboard.press("Enter");
       const about = page.locator("#about-dialog");
       assert(await about.evaluate((node) => node.matches(":modal")));
+      assert.match(
+        await about.ariaSnapshot(),
+        /heading "このサイトについて" \[level=2\]/,
+      );
       assert(await menu.isHidden());
       await page.locator("#template").evaluate((node) => node.focus());
       assert(
@@ -357,12 +361,17 @@ try {
         );
       }
       assert.equal(
-        await about.locator("a").getAttribute("href"),
+        await about.getByRole("link", { name: "連絡先" }).getAttribute("href"),
         "https://x.com/1m_lcei",
       );
       assert.equal(
-        await about.locator(".link-placeholder").getAttribute("href"),
-        null,
+        await about.getByRole("link", { name: "GitHub" }).getAttribute("href"),
+        "https://github.com/1m-lcei/image-rect-picker",
+      );
+      await page.waitForFunction(() =>
+        [
+          ...document.querySelectorAll<SVGUseElement>(".about-links svg use"),
+        ].every((node) => node.getBBox().width > 0),
       );
       await page.screenshot({ path: `test-results/${name}-about.png` });
       await page.keyboard.press("Escape");
@@ -1017,12 +1026,15 @@ try {
   try {
     const page = await browser.newPage();
     await page.goto(`http://127.0.0.1:${nestedAddress.port}/nested/`);
+    await page.locator("#menu-trigger").click();
+    await page.locator("#about-trigger").click();
     // External SVG references must render beneath a deployment subdirectory.
     await page.waitForFunction(() =>
       [...document.querySelectorAll<SVGUseElement>("svg use")]
         .filter((node) => node.ownerSVGElement?.getBoundingClientRect().width)
         .every((node) => node.getBBox().width > 0),
     );
+    await page.keyboard.press("Escape");
     await page.locator("#file").setInputFiles(await imageFile(page, 1, 1));
     await loaded(page);
     assert.equal(await page.locator("#output").inputValue(), "1x1+0+0");
