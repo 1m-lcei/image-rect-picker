@@ -16,11 +16,27 @@
           <div><p class="eyebrow">IMAGE RECT PICKER</p><h1>画像領域ピッカー</h1></div>
         </div>
         <div class="header-actions">
-          <span class="privacy-badge">画像はブラウザの外に出ません</span>
           <button id="theme-toggle" class="icon-button" type="button" aria-label="テーマの切り替え" title="テーマの切り替え" hidden>
             <svg class="sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.5 1.5m11 11L19 19M5 19l1.5-1.5m11-11L19 5"/></svg>
             <svg class="moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.8 13.2A9 9 0 0 1 10.8 3.2a9 9 0 1 0 10 10Z"/></svg>
           </button>
+          <button id="help-trigger" class="icon-button" type="button" commandfor="help-dialog" command="show-modal" aria-label="操作ガイド" title="操作ガイド" aria-haspopup="dialog">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.2 9a2.8 2.8 0 1 1 4.7 2c-1.1.7-1.9 1.2-1.9 2.5M12 17h.01"/></svg>
+          </button>
+          <button id="menu-trigger" class="icon-button" type="button" popovertarget="header-menu" aria-label="メニュー" title="メニュー">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+          </button>
+          <section id="header-menu" popover="auto" aria-label="メニュー">
+            <fieldset class="theme-settings">
+              <legend>テーマ</legend>
+              <div class="theme-options">
+                <label><input type="radio" name="theme" value="system" checked />システム</label>
+                <label><input type="radio" name="theme" value="light" />ライト</label>
+                <label><input type="radio" name="theme" value="dark" />ダーク</label>
+              </div>
+            </fieldset>
+            <button id="about-trigger" class="menu-item" type="button" commandfor="about-dialog" command="show-modal" aria-haspopup="dialog">このサイトについて</button>
+          </section>
         </div>
       </header>
 
@@ -93,7 +109,7 @@
           <svg viewBox="0 0 64 64" fill="none" aria-hidden="true"><rect x="10" y="10" width="44" height="44" rx="4" stroke="currentColor" stroke-width="1.5"/><path d="m11 43 13-13 10 10 7-7 12 12" stroke="currentColor" stroke-width="1.5"/><circle cx="41" cy="23" r="4" stroke="currentColor" stroke-width="1.5"/></svg>
           <h2>画像から、必要な範囲を。</h2>
           <p>ここに画像をドロップするか、上の欄から選択してください。</p>
-          <p class="hint">範囲を選んで、座標をコピー。画像のアップロードはありません。</p>
+          <p class="privacy-badge">画像はブラウザの外に出ません</p>
         </div>
         <div id="stage" hidden>
           <img id="image" alt="" draggable="false" />
@@ -109,14 +125,41 @@
 
       <footer>
         <p id="status" role="status" aria-live="polite">画像を開いて始めましょう。</p>
-        <details>
-          <summary>操作ガイド</summary>
-          <p id="interaction-hint">背景をドラッグして範囲を作成。枠内で移動、四辺のハンドルでサイズを調整できます。枠やハンドルにフォーカスして矢印キーで1px、Shift + 矢印キーで10px調整。Escapeでドラッグを取り消します。ホイールで拡大・縮小。「パン」を選んでドラッグすると表示位置を移動できます。Space＋ドラッグ・マウスの中ボタンでもパンできます。</p>
-          <p>右端・下端は範囲に含まない境界です。x2 = x + 幅、y2 = y + 高さ。画像と設定はページを閉じると消えます。</p>
-        </details>
       </footer>
       <noscript>このツールを利用するにはJavaScriptを有効にしてください。画像はブラウザ内だけで処理されます。</noscript>
     </main>
+    <dialog id="help-dialog" aria-labelledby="help-title" closedby="any">
+      <div class="dialog-header">
+        <h2 id="help-title">操作ガイド</h2>
+        <form method="dialog"><button class="icon-button" type="submit" aria-label="閉じる" title="閉じる"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="m6 6 12 12M6 18 18 6"/></svg></button></form>
+      </div>
+      <dl id="interaction-hint" class="guide-steps">
+        <dt>画像を開く</dt><dd>上の画像選択欄をクリックするか、画像表示領域へ画像をドロップします。</dd>
+        <dt>範囲を選ぶ</dt><dd>背景をドラッグして作成。枠内で移動、四辺のハンドルでサイズを調整できます。数値入力でも変更できます。</dd>
+        <dt>微調整</dt><dd>枠やハンドルにフォーカスして矢印キーで1px、Shift＋矢印キーで10px調整します。</dd>
+        <dt>拡大・移動</dt><dd>ホイールで拡大・縮小。「パン」を選んでドラッグすると表示位置を移動できます。Space＋ドラッグ・マウスの中ボタンでもパンできます。</dd>
+        <dt>取り消し</dt><dd>Escapeでドラッグ開始前の状態に戻します。</dd>
+        <dt>座標をコピー</dt><dd>出力欄のコピーボタンを押します。出力テンプレートには {x} {y} {width} {height} {x2} {y2} を使えます。</dd>
+      </dl>
+      <p class="hint">座標は画像の原寸ピクセルです。右端・下端は範囲に含まない境界で、x2 = x + 幅、y2 = y + 高さです。画像と設定はページを閉じると消えます。</p>
+    </dialog>
+    <dialog id="about-dialog" aria-labelledby="about-title" closedby="any">
+      <div class="dialog-header">
+        <h2 id="about-title">このサイトについて</h2>
+        <form method="dialog"><button class="icon-button" type="submit" aria-label="閉じる" title="閉じる"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="m6 6 12 12M6 18 18 6"/></svg></button></form>
+      </div>
+      <div class="about-content">
+        <img src="/favicon.svg" alt="" width="76" height="76" />
+        <p class="about-name">Image Rect Picker</p>
+        <p>画像上の範囲を選び、原寸の座標とサイズを好きな形式でコピーできるツールです。</p>
+        <p class="hint">画像の処理はブラウザ内で完結します。</p>
+      </div>
+      <nav class="about-links" aria-label="連絡先とソースコード">
+        <a href="https://x.com/1m_lcei" target="_blank" rel="noopener noreferrer">連絡先（X）</a>
+        <!-- GitHubの公開後にリンクへ置き換える -->
+        <span class="link-placeholder">GitHub（準備中）</span>
+      </nav>
+    </dialog>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>

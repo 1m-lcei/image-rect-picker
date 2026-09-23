@@ -89,11 +89,17 @@ async function dragImage(
 ): Promise<void> {
   const box = await page.locator("#stage").boundingBox();
   assert(box);
-  await page.mouse.move(box.x + (from[0] ?? 0), box.y + (from[1] ?? 0));
+  // WebKit sends integer pointer coordinates; target the nearest CSS pixel.
+  await page.mouse.move(
+    Math.round(box.x + (from[0] ?? 0)),
+    Math.round(box.y + (from[1] ?? 0)),
+  );
   await page.mouse.down();
-  await page.mouse.move(box.x + (to[0] ?? 0), box.y + (to[1] ?? 0), {
-    steps: 5,
-  });
+  await page.mouse.move(
+    Math.round(box.x + (to[0] ?? 0)),
+    Math.round(box.y + (to[1] ?? 0)),
+    { steps: 5 },
+  );
   await page.mouse.up();
 }
 
@@ -141,6 +147,8 @@ try {
     });
     try {
       await page.goto(origin);
+      const menuTrigger = page.locator("#menu-trigger");
+      const menu = page.locator("#header-menu");
       const themeToggle = page.locator("#theme-toggle");
       const checkTheme = async (preference: string, target: "sun" | "moon") => {
         await page.waitForFunction(
@@ -161,6 +169,10 @@ try {
             .evaluate((node) => getComputedStyle(node).colorScheme),
           preference === "system" ? "light dark" : preference,
         );
+        assert.equal(
+          await page.locator('input[name="theme"]:checked').inputValue(),
+          preference,
+        );
       };
       await checkTheme("system", "moon");
       await themeToggle.click();
@@ -177,13 +189,115 @@ try {
       await checkTheme("dark", "sun");
       await themeToggle.press("Space");
       await checkTheme("system", "moon");
+      await menuTrigger.click();
+      await page.getByRole("radio", { name: "ライト", exact: true }).check();
+      await checkTheme("light", "moon");
+      await page.emulateMedia({ colorScheme: "dark" });
+      await checkTheme("light", "moon");
+      await page.getByRole("radio", { name: "ダーク", exact: true }).check();
+      await checkTheme("dark", "sun");
+      await page
+        .getByRole("radio", { name: "ダーク", exact: true })
+        .press("ArrowLeft");
+      await checkTheme("light", "moon");
+      await page.getByRole("radio", { name: "システム" }).check();
+      await checkTheme("system", "sun");
+      await page.emulateMedia({ colorScheme: "light" });
+      await checkTheme("system", "moon");
+      await page.keyboard.press("Escape");
+      assert(await menu.isHidden());
+      await menuTrigger.press("Enter");
+      await page.keyboard.press("Tab");
+      assert(
+        await page
+          .getByRole("radio", { name: "システム" })
+          .evaluate((node) => node === document.activeElement),
+      );
+      await page.keyboard.press("Tab");
+      await page.keyboard.press("Enter");
+      const about = page.locator("#about-dialog");
+      assert(await about.evaluate((node) => node.matches(":modal")));
+      assert(await menu.isHidden());
+      await page.locator("#template").evaluate((node) => node.focus());
+      assert(
+        await about.evaluate((node) => node.contains(document.activeElement)),
+      );
+      for (let i = 0; i < 3; i++) {
+        await page.keyboard.press("Tab");
+        assert(
+          await about.evaluate(
+            (node) =>
+              node.contains(document.activeElement) ||
+              document.activeElement === document.body,
+          ),
+        );
+      }
+      assert.equal(
+        await about.locator("a").getAttribute("href"),
+        "https://x.com/1m_lcei",
+      );
+      assert.equal(
+        await about.locator(".link-placeholder").getAttribute("href"),
+        null,
+      );
+      await page.screenshot({ path: `test-results/${name}-about.png` });
+      await page.keyboard.press("Escape");
+      assert(await about.isHidden());
+      await page.waitForFunction(
+        () => document.activeElement?.id === "menu-trigger",
+      );
+      const helpTrigger = page.locator("#help-trigger");
+      const help = page.locator("#help-dialog");
+      await helpTrigger.press("Space");
+      assert(await help.evaluate((node) => node.matches(":modal")));
+      const helpBox = await help.boundingBox();
+      assert(helpBox);
+      await page.mouse.click(helpBox.x + 4, helpBox.y + 4);
+      assert(await help.isVisible());
+      await page.mouse.click(1, 1);
+      assert(await help.isHidden());
+      await page.waitForFunction(
+        () => document.activeElement?.id === "help-trigger",
+      );
+      await helpTrigger.click();
+      await help.getByRole("button", { name: "閉じる" }).click();
+      assert(await help.isHidden());
       assert(await page.locator("#empty").isVisible());
       assert(await page.locator("#copy").isDisabled());
       const file = await imageFile(page);
+      let fileChoosers = 0;
+      page.on("filechooser", () => fileChoosers++);
       await page.locator("#choose-image").focus();
       const chooser = page.waitForEvent("filechooser");
       await page.keyboard.press("Enter");
       await (await chooser).setFiles(file);
+      await loaded(page);
+      // The whole file panel opens the picker, except its clear button.
+      for (const target of [
+        ".file-panel",
+        "#choose-image svg",
+        "#image-name",
+        "#image-size",
+        "#file-hint",
+      ]) {
+        const box = await page.locator(target).boundingBox();
+        assert(box);
+        const picker = page.waitForEvent("filechooser");
+        await page.mouse.click(box.x + 3, box.y + box.height / 2);
+        await (await picker).setFiles(file);
+        await loaded(page);
+      }
+      assert.equal(fileChoosers, 6);
+      await page.locator("#clear svg").click();
+      assert(await page.locator("#empty").isVisible());
+      const clearBox = await page.locator("#clear").boundingBox();
+      assert(clearBox);
+      await page.mouse.click(
+        clearBox.x + clearBox.width / 2,
+        clearBox.y + clearBox.height / 2,
+      );
+      assert.equal(fileChoosers, 6);
+      await page.locator("#file").setInputFiles(file);
       await loaded(page);
       assert.deepEqual(await values(page), [160, 120, 320, 240]);
       assert.equal(
@@ -643,6 +757,21 @@ try {
         path: `test-results/${name}-mobile-dark.png`,
         fullPage: true,
       });
+      await menuTrigger.tap();
+      const menuBox = await menu.boundingBox();
+      assert(menuBox && menuBox.x >= 0 && menuBox.x + menuBox.width <= 390);
+      await page.screenshot({ path: `test-results/${name}-mobile-menu.png` });
+      await page.locator("#about-trigger").tap();
+      await about.getByRole("button", { name: "閉じる" }).tap();
+      await helpTrigger.tap();
+      const mobileHelpBox = await help.boundingBox();
+      assert(
+        mobileHelpBox &&
+          mobileHelpBox.x >= 0 &&
+          mobileHelpBox.x + mobileHelpBox.width <= 390,
+      );
+      await page.screenshot({ path: `test-results/${name}-mobile-help.png` });
+      await help.getByRole("button", { name: "閉じる" }).tap();
 
       if (name === "chromium" || name === "edge") {
         const session = await context.newCDPSession(page);
@@ -703,7 +832,7 @@ try {
       assert.deepEqual(errors, []);
       assert.deepEqual(external, []);
       console.log(
-        `PASS ${name}: image loading, selection, cancellation, keyboard, zoom, pan, visible handles, theme, clipboard, responsive layout`,
+        `PASS ${name}: image loading, selection, cancellation, keyboard, zoom, pan, visible handles, theme, menus, dialogs, clipboard, responsive layout`,
       );
     } catch (error) {
       failed = true;

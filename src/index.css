@@ -1,4 +1,4 @@
-@layer base, layout, controls, image;
+@layer base, layout, controls, image, overlays;
 
 [hidden] {
   display: none;
@@ -22,6 +22,16 @@
   * {
     box-sizing: border-box;
   }
+  button,
+  input,
+  .file-panel,
+  dialog,
+  #header-menu,
+  #error,
+  #viewport,
+  .handle::after {
+    corner-shape: squircle;
+  }
   body {
     margin: 0;
   }
@@ -42,8 +52,7 @@
   input {
     font: inherit;
   }
-  button,
-  summary {
+  button {
     cursor: pointer;
   }
   :focus-visible {
@@ -104,6 +113,7 @@
   }
   .header-actions {
     margin-inline-start: auto;
+    gap: 0.5rem;
   }
   .eyebrow {
     font-size: 0.65rem;
@@ -125,6 +135,7 @@
     margin-inline-end: 0.5rem;
   }
   .file-panel {
+    position: relative;
     display: grid;
     grid-template-columns: auto minmax(0, 1fr) auto auto;
     align-items: center;
@@ -133,6 +144,25 @@
     background: var(--panel);
     border: 1px solid var(--border);
     border-radius: 0.65rem;
+  }
+  #choose-image::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+  }
+  #clear {
+    position: relative;
+    z-index: 1;
+  }
+  .file-panel:has(#choose-image:hover) {
+    border-color: var(--accent);
+  }
+  .file-panel:has(#choose-image:focus-visible) {
+    outline: 3px solid var(--focus);
+    outline-offset: 3px;
+  }
+  #choose-image:focus-visible {
+    outline: none;
   }
   .file-summary {
     min-inline-size: 0;
@@ -184,7 +214,8 @@
     min-inline-size: 0;
   }
   .copy-row {
-    gap: 0.5rem;
+    position: relative;
+    gap: 0;
   }
   .tokens {
     margin-block-start: 0.3rem;
@@ -200,17 +231,6 @@
   #status {
     flex: 1 1 20rem;
     line-height: 1.7;
-  }
-  details {
-    max-inline-size: 42rem;
-    line-height: 1.8;
-  }
-  summary {
-    text-align: end;
-    color: var(--accent);
-  }
-  details p {
-    margin-block-start: 0.5rem;
   }
   @media (width < 42rem) {
     main {
@@ -240,9 +260,6 @@
       justify-content: space-between;
       flex-wrap: wrap;
     }
-    summary {
-      text-align: start;
-    }
   }
 }
 
@@ -261,6 +278,9 @@
   #template {
     font-family: var(--mono);
     font-size: 0.9rem;
+  }
+  #output {
+    padding-inline-end: 2.5rem;
   }
   button {
     padding: 0.6rem 0.85rem;
@@ -315,6 +335,24 @@
     inline-size: 1.25rem;
     block-size: 1.25rem;
   }
+  #choose-image {
+    border: 0;
+    background: transparent;
+  }
+  #copy {
+    position: absolute;
+    inset-inline-end: 0.25rem;
+    inset-block-start: 50%;
+    translate: 0 -50%;
+    inline-size: 1.75rem;
+    block-size: 1.75rem;
+    min-block-size: 1.75rem;
+    padding: 0.25rem;
+  }
+  #copy svg {
+    inline-size: 1rem;
+    block-size: 1rem;
+  }
   #error {
     display: flex;
     align-items: center;
@@ -325,6 +363,177 @@
     border-radius: 0.4rem;
     color: light-dark(#9c2424, #ffb6b6);
     font-size: 0.85rem;
+  }
+}
+
+@layer overlays {
+  #menu-trigger {
+    anchor-name: --header-menu;
+  }
+  #header-menu {
+    position: fixed;
+    position-anchor: --header-menu;
+    inset: auto;
+    top: calc(anchor(bottom) + 0.5rem);
+    left: anchor(right);
+    translate: -100% 0;
+    margin: 0;
+    inline-size: 14rem;
+    max-inline-size: calc(100% - 2rem);
+    max-block-size: calc(100dvh - 2rem);
+    overflow: auto;
+    padding: 0.5rem;
+    border: 1px solid var(--border);
+    border-radius: 0.65rem;
+    background: var(--panel);
+    color: inherit;
+    box-shadow: 0 0.5rem 2rem #0002;
+    font-size: 0.85rem;
+  }
+  .theme-settings {
+    padding: 0.25rem 0 0.5rem;
+    margin-block-end: 0.25rem;
+    border-block-end: 1px solid var(--border);
+  }
+  .theme-options {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    overflow: hidden;
+    border: 1px solid var(--border);
+    border-radius: 0.35rem;
+    corner-shape: squircle;
+  }
+  .theme-options label {
+    position: relative;
+    display: grid;
+    place-items: center;
+    min-block-size: 2rem;
+    padding: 0.25rem;
+    margin: 0;
+    font-weight: 400;
+    cursor: pointer;
+  }
+  .theme-options label + label {
+    border-inline-start: 1px solid var(--border);
+  }
+  .theme-options input {
+    position: absolute;
+    inset: 0;
+    inline-size: 100%;
+    block-size: 100%;
+    margin: 0;
+    opacity: 0;
+    cursor: inherit;
+  }
+  .theme-options label:has(:checked) {
+    background: var(--accent);
+    color: var(--panel);
+    font-weight: 650;
+  }
+  .theme-options label:has(:focus-visible) {
+    outline: 2px solid currentColor;
+    outline-offset: -3px;
+  }
+  @media (forced-colors: active) {
+    .theme-options label:has(:checked) {
+      forced-color-adjust: none;
+      background: Highlight;
+      color: HighlightText;
+    }
+  }
+  .menu-item {
+    inline-size: 100%;
+    border: 0;
+    background: transparent;
+    text-align: start;
+  }
+  dialog {
+    inline-size: min(36rem, calc(100% - 2rem));
+    max-block-size: calc(100dvh - 2rem);
+    padding: 1.5rem;
+    overflow: auto;
+    border: 1px solid var(--border);
+    border-radius: 1rem;
+    background: var(--panel);
+    color: inherit;
+    box-shadow: 0 1rem 4rem #0003;
+  }
+  dialog::backdrop {
+    background: #0008;
+  }
+  .dialog-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-block-end: 1rem;
+  }
+  .dialog-header h2 {
+    font-size: 1.05rem;
+  }
+  .dialog-header form {
+    margin: 0;
+  }
+  .guide-steps {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 0.85rem 1.25rem;
+    font-size: 0.85rem;
+    line-height: 1.8;
+  }
+  .guide-steps dt {
+    font-weight: 650;
+  }
+  .guide-steps dd {
+    margin: 0;
+  }
+  #about-dialog {
+    inline-size: min(26rem, calc(100% - 2rem));
+  }
+  .about-content {
+    display: grid;
+    justify-items: center;
+    gap: 0.75rem;
+    padding-block: 0.5rem 1.5rem;
+    font-size: 0.85rem;
+    line-height: 1.8;
+    text-align: center;
+  }
+  .about-name {
+    font-size: 1.1rem;
+    font-weight: 650;
+  }
+  .about-links {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 1rem;
+    border-block-start: 1px solid var(--border);
+    padding-block-start: 1rem;
+    font-size: 0.85rem;
+  }
+  .about-links a {
+    color: var(--accent);
+  }
+  .about-links .link-placeholder {
+    color: var(--muted);
+  }
+  @supports not (position-anchor: --header-menu) {
+    #header-menu {
+      translate: none;
+    }
+  }
+  @media (width < 30rem) {
+    dialog {
+      padding: 1rem;
+    }
+    .guide-steps {
+      grid-template-columns: 1fr;
+      row-gap: 0.25rem;
+    }
+    .guide-steps dd {
+      margin-block-end: 0.5rem;
+    }
   }
 }
 

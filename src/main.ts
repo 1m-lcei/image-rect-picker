@@ -49,6 +49,36 @@ const handles = Array.from(
 
 initTheme(element<HTMLButtonElement>("theme-toggle"));
 
+const menuTrigger = element<HTMLButtonElement>("menu-trigger");
+const menu = element("header-menu");
+element("about-dialog").addEventListener("close", () => menuTrigger.focus());
+if (!CSS.supports("position-anchor", "--header-menu")) {
+  const positionMenu = () => {
+    if (!menu.matches(":popover-open")) return;
+    const box = menuTrigger.getBoundingClientRect();
+    menu.style.top = `${Math.max(0, Math.min(box.bottom + 8, innerHeight - menu.offsetHeight))}px`;
+    menu.style.left = `${Math.max(0, box.right - menu.offsetWidth)}px`;
+  };
+  menu.addEventListener("toggle", positionMenu);
+  window.addEventListener("resize", positionMenu);
+  window.addEventListener("scroll", positionMenu, true);
+}
+if (!("closedBy" in HTMLDialogElement.prototype)) {
+  for (const dialog of document.querySelectorAll("dialog")) {
+    dialog.addEventListener("click", (event) => {
+      if (event.target !== dialog) return;
+      const box = dialog.getBoundingClientRect();
+      if (
+        event.clientX < box.left ||
+        event.clientX > box.right ||
+        event.clientY < box.top ||
+        event.clientY > box.bottom
+      )
+        dialog.close();
+    });
+  }
+}
+
 let image: LoadedImage | null = null;
 let rect: Rect | null = null;
 let scale = 1;
@@ -418,6 +448,7 @@ window.addEventListener("blur", () => {
   renderPanState();
 });
 document.addEventListener("keydown", (event) => {
+  if (document.querySelector("dialog[open]")) return;
   if (event.key === "Escape" && drag) {
     event.preventDefault();
     finishDrag(true);

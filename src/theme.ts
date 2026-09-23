@@ -2,6 +2,9 @@ type ThemePreference = "system" | "light" | "dark";
 
 export function initTheme(toggle: HTMLButtonElement): void {
   const system = matchMedia("(prefers-color-scheme: dark)");
+  const choices = document.querySelectorAll<HTMLInputElement>(
+    'input[name="theme"]',
+  );
   const root = document.documentElement;
   const meta = document.querySelector<HTMLMetaElement>(
     'meta[name="color-scheme"]',
@@ -18,6 +21,7 @@ export function initTheme(toggle: HTMLButtonElement): void {
     if (meta) meta.content = scheme;
     toggle.querySelector(".sun")?.toggleAttribute("hidden", !dark);
     toggle.querySelector(".moon")?.toggleAttribute("hidden", dark);
+    for (const choice of choices) choice.checked = choice.value === preference;
     toggle.hidden = false;
   };
 
@@ -26,6 +30,12 @@ export function initTheme(toggle: HTMLButtonElement): void {
     preference = next === (system.matches ? "dark" : "light") ? "system" : next;
     apply();
   });
+  for (const choice of choices) {
+    choice.addEventListener("change", () => {
+      preference = choice.value as ThemePreference;
+      apply();
+    });
+  }
   system.addEventListener("change", apply);
   apply();
 }

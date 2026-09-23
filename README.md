@@ -30,7 +30,7 @@ Select a rectangular region in an image and copy its coordinates in your preferr
 - Enter coordinates directly, or use arrow keys for 1-pixel adjustments and Shift + arrow keys for 10 pixels.
 - Zoom around the cursor, fit the whole image, or view it at 100%. Coordinates always refer to the original image.
 - Pan with Space + drag, the middle mouse button, or the Pan mode button. Resize handles stay centered on each visible edge.
-- Follow your system theme or switch between light and dark using the button at the top right.
+- Toggle light and dark with the top-right button, or choose System, Light, or Dark from the menu.
 - Customize the output template and copy the result.
 - Replace or clear the image while keeping your template. Reloading the page resets everything.
 
