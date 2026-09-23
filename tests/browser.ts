@@ -340,12 +340,13 @@ try {
       await page.keyboard.press("Enter");
       await (await chooser).setFiles(file);
       await loaded(page);
+      assert(await page.locator("#image").isVisible());
+      assert(await page.locator("#error").isHidden());
       // The whole file panel opens the picker, except its clear button.
       for (const target of [
         ".file-panel",
         "#choose-image svg",
         "#image-name",
-        "#image-size",
         "#file-hint",
       ]) {
         const box = await page.locator(target).boundingBox();
@@ -355,7 +356,7 @@ try {
         await (await picker).setFiles(file);
         await loaded(page);
       }
-      assert.equal(fileChoosers, 6);
+      assert.equal(fileChoosers, 5);
       await page.locator("#clear svg").click();
       assert(await page.locator("#empty").isVisible());
       assert(
@@ -369,7 +370,7 @@ try {
         clearBox.x + clearBox.width / 2,
         clearBox.y + clearBox.height / 2,
       );
-      assert.equal(fileChoosers, 6);
+      assert.equal(fileChoosers, 5);
       await page.locator("#file").setInputFiles(file);
       await loaded(page);
       assert.deepEqual(await values(page), [160, 120, 320, 240]);

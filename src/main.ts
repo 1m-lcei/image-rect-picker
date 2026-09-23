@@ -241,12 +241,10 @@ async function openFiles(files: FileList): Promise<void> {
     imageElement.alt = next.name;
     if (previous) URL.revokeObjectURL(previous.url);
     element("image-name").textContent = next.name;
-    element("image-size").textContent =
-      `${next.width.toLocaleString("ja-JP")} × ${next.height.toLocaleString("ja-JP")} px`;
     stage.hidden = false;
     fitImage();
     status.textContent =
-      "画像を開きました。背景のドラッグで範囲を作成できます。";
+      "画像を開きました。";
   } catch (error) {
     if (request !== loadRequest) return;
     showError(
@@ -281,7 +279,6 @@ clear.addEventListener("click", () => {
   stage.hidden = true;
   viewport.setAttribute("aria-busy", "false");
   element("image-name").textContent = "画像を選択、または下の領域にドロップ";
-  element("image-size").textContent = "すべての座標は画像の原寸ピクセルです";
   for (const input of Object.values(inputs)) {
     input.value = "";
     input.setCustomValidity("");
@@ -292,7 +289,7 @@ clear.addEventListener("click", () => {
   fitButton.setAttribute("aria-pressed", "true");
   showError("");
   renderRect();
-  status.textContent = "画像をクリアしました。テンプレートは保持しています。";
+  status.textContent = "画像をクリアしました。";
   fileInput.focus();
 });
 
@@ -534,7 +531,7 @@ copy.addEventListener("click", async () => {
     output.focus();
     output.select();
     status.textContent =
-      "自動コピーできませんでした。選択された出力をCtrl+C、または⌘Cでコピーしてください。";
+      "自動コピーできませんでした。出力欄をテキスト選択してコピーしてください。";
   }
 });
 element("dismiss-error").addEventListener("click", () => showError(""));

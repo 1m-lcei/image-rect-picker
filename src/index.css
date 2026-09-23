@@ -7,7 +7,9 @@
 @layer base {
   :root {
     color-scheme: light dark;
-    font-family: system-ui, "Noto Sans JP", sans-serif;
+    font-family:
+      "Helvetica Neue", Arial, "Hiragino Kaku Gothic ProN", "Hiragino Sans",
+      "Noto Sans JP", Meiryo, sans-serif;
     color: light-dark(#202b3d, #e4eaf4);
     background: light-dark(#f6f7f9, #11161f);
     --panel: light-dark(#fff, #1b2330);
@@ -104,7 +106,7 @@
   footer {
     display: flex;
     align-items: center;
-    gap: 1rem;
+    gap: 0.5rem;
     min-inline-size: 0;
   }
   .page-header {
@@ -422,6 +424,7 @@
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
     overflow: hidden;
+    margin: 0 4px;
     border: 1px solid var(--border);
     border-radius: 0.35rem;
     corner-shape: squircle;
@@ -434,6 +437,7 @@
     padding: 0.25rem;
     margin: 0;
     font-weight: 400;
+    font-size: 80%;
     cursor: pointer;
   }
   .theme-options label + label {
