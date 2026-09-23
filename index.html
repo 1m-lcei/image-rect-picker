@@ -86,7 +86,7 @@
         <div>
           <label for="output">出力</label>
           <div class="copy-row">
-            <input id="output" type="text" readonly placeholder="画像を開くと座標が表示されます" spellcheck="false" />
+            <input id="output" type="text" readonly placeholder="範囲を選択すると座標が表示されます" spellcheck="false" />
             <button id="copy" class="primary icon-button" type="button" aria-label="コピー" title="コピー" disabled>
               <svg aria-hidden="true"><use href="/icons.svg#copy" /></svg>
             </button>
@@ -113,7 +113,7 @@
         </div>
         <div id="stage" hidden>
           <img id="image" alt="" draggable="false" />
-          <div id="selection">
+          <div id="selection" hidden>
             <button id="move" data-handle="move" type="button" aria-label="選択範囲を移動" aria-describedby="interaction-hint"></button>
             <button class="handle north" data-handle="n" type="button" aria-label="上辺を調整" aria-describedby="interaction-hint"></button>
             <button class="handle south" data-handle="s" type="button" aria-label="下辺を調整" aria-describedby="interaction-hint"></button>
@@ -132,7 +132,7 @@
       <h2 id="help-title" class="dialog-title">操作ガイド</h2>
       <dl id="interaction-hint" class="guide-steps">
         <dt>画像を開く</dt><dd>上の画像選択欄をクリックするか、画像表示領域へ画像をドロップします。</dd>
-        <dt>範囲を選ぶ</dt><dd>背景をドラッグして作成。枠内で移動、四辺のハンドルでサイズを調整できます。数値入力でも変更できます。</dd>
+        <dt>範囲を選ぶ</dt><dd>画像上をドラッグして作成。未選択のときは画像表示領域にフォーカスしてEnterでも作成できます。枠内で移動、四辺のハンドルでサイズを調整できます。数値入力でも変更できます。</dd>
         <dt>微調整</dt><dd>枠やハンドルにフォーカスして矢印キーで1px、Shift＋矢印キーで10px調整します。</dd>
         <dt>拡大・移動</dt><dd>ホイールで拡大・縮小。<svg class="inline-icon" aria-hidden="true"><use href="/icons.svg#pan" /></svg>ボタンを有効にしてドラッグするとパン（表示位置を移動）できます。Space＋ドラッグ・マウスの中ボタンでもパンできます。</dd>
         <dt>座標をコピー</dt><dd>出力欄の<svg class="inline-icon" aria-hidden="true"><use href="/icons.svg#copy" /></svg>ボタンを押します。出力テンプレートには {x} {y} {width} {height} {x2} {y2} を使えます。</dd>

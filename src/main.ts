@@ -80,7 +80,7 @@ let spacePressed = false;
 let drag: {
   pointerId: number;
   handle: Handle | "draw" | "pan";
-  rect: Rect;
+  rect: Rect | null;
   start: Point;
   client: Point;
   scroll: Point;
@@ -104,8 +104,15 @@ function renderRect(): void {
   zoomControls.disabled = !image || !!drag;
   clear.disabled = !image && !loading;
   copy.disabled = !rect;
+  selection.hidden = !rect;
   renderPanState();
   output.value = formatRect(rect, template.value);
+  for (const field of fields) {
+    const input = inputs[field];
+    input.value = rect ? String(rect[field]) : "";
+    input.setCustomValidity("");
+    input.removeAttribute("aria-invalid");
+  }
   if (!rect || !image) return;
   Object.assign(selection.style, {
     left: `${rect.x * scale}px`,
@@ -113,12 +120,6 @@ function renderRect(): void {
     width: `${rect.width * scale}px`,
     height: `${rect.height * scale}px`,
   });
-  for (const field of fields) {
-    const input = inputs[field];
-    input.value = String(rect[field]);
-    input.setCustomValidity("");
-    input.removeAttribute("aria-invalid");
-  }
   inputs.x.max = String(image.width - rect.width);
   inputs.y.max = String(image.height - rect.height);
   inputs.width.max = String(image.width - rect.x);
@@ -239,14 +240,15 @@ async function openFiles(files: FileList): Promise<void> {
     finishDrag(true);
     const previous = image;
     image = next;
-    rect = initialRect(next);
+    rect = null;
     imageElement.src = next.url;
     imageElement.alt = next.name;
     if (previous) URL.revokeObjectURL(previous.url);
     element("image-name").textContent = next.name;
     stage.hidden = false;
     fitImage();
-    status.textContent = "画像を開きました。";
+    status.textContent =
+      "画像を開きました。ドラッグで範囲を選択してください。画像表示領域にフォーカス + Enterでも選択を開始できます。";
   } catch (error) {
     if (request !== loadRequest) return;
     showError(
@@ -281,11 +283,6 @@ clear.addEventListener("click", () => {
   stage.hidden = true;
   viewport.setAttribute("aria-busy", "false");
   element("image-name").textContent = "画像を選択、または下の領域にドロップ";
-  for (const input of Object.values(inputs)) {
-    input.value = "";
-    input.setCustomValidity("");
-    input.removeAttribute("aria-invalid");
-  }
   zoomValue.value = "—";
   fit = true;
   showError("");
@@ -331,7 +328,7 @@ function handleFrom(target: EventTarget | null): HTMLButtonElement | null {
 }
 
 viewport.addEventListener("pointerdown", (event) => {
-  if (!image || !rect || drag || !event.isPrimary) return;
+  if (!image || drag || !event.isPrimary) return;
   const panning =
     event.button === 1 || (event.button === 0 && (panMode || spacePressed));
   if (
@@ -355,7 +352,7 @@ viewport.addEventListener("pointerdown", (event) => {
     handle: panning
       ? "pan"
       : ((button?.dataset.handle as Handle | undefined) ?? "draw"),
-    rect: { ...rect },
+    rect,
     start: pointOnImage(client),
     client,
     scroll: { x: viewport.scrollLeft, y: viewport.scrollTop },
@@ -381,7 +378,7 @@ function updateDrag(event: PointerEvent): void {
   if (drag.handle === "draw") {
     if (!drag.moved) return;
     rect = drawRect(drag.start, current, image);
-  } else {
+  } else if (drag.rect) {
     rect = adjustRect(
       drag.rect,
       drag.handle,
@@ -469,6 +466,22 @@ panButton.addEventListener("click", () => {
 });
 viewport.addEventListener("auxclick", (event) => {
   if (event.button === 1) event.preventDefault();
+});
+
+viewport.addEventListener("keydown", (event) => {
+  if (
+    event.key !== "Enter" ||
+    event.target !== viewport ||
+    !image ||
+    rect ||
+    drag
+  )
+    return;
+  event.preventDefault();
+  rect = initialRect(image);
+  renderRect();
+  element("move").focus({ preventScroll: true });
+  announceRect();
 });
 
 stage.addEventListener("keydown", (event) => {

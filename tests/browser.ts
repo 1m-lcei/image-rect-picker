@@ -438,6 +438,35 @@ try {
       assert.equal(fileChoosers, 5);
       await page.locator("#file").setInputFiles(file);
       await loaded(page);
+      assert(await page.locator("#selection").isHidden());
+      assert(await page.locator("#copy").isDisabled());
+      assert(await page.locator("#x").isDisabled());
+      assert.equal(await page.locator("#output").inputValue(), "");
+      assert.equal(await page.locator("#x").inputValue(), "");
+      await page.locator("#actual-size").click();
+      await page.locator("#pan").click();
+      await dragImage(page, [10, 10], [110, 90]);
+      assert(await page.locator("#selection").isHidden());
+      await page.locator("#pan").click();
+      const unselectedStage = await page.locator("#stage").boundingBox();
+      assert(unselectedStage);
+      await page.mouse.click(unselectedStage.x + 10, unselectedStage.y + 10);
+      assert(await page.locator("#selection").isHidden());
+      await page.mouse.down();
+      await page.mouse.move(unselectedStage.x + 110, unselectedStage.y + 90);
+      assert(await page.locator("#selection").isVisible());
+      await page.keyboard.press("Escape");
+      await page.mouse.up();
+      assert(await page.locator("#selection").isHidden());
+      assert.equal(await page.locator("#output").inputValue(), "");
+      await dragImage(page, [10, 10], [110, 90]);
+      assert.deepEqual(await values(page), [10, 10, 100, 80]);
+      assert(await page.locator("#copy").isEnabled());
+      await page.locator("#file").setInputFiles(file);
+      await loaded(page);
+      assert(await page.locator("#selection").isHidden());
+      assert.equal(await page.locator("#x").inputValue(), "");
+      await page.locator("#viewport").press("Enter");
       assert.deepEqual(await values(page), [160, 120, 320, 240]);
       assert.equal(
         await page.locator("#output").inputValue(),
@@ -721,13 +750,16 @@ try {
           supported.name,
         );
       }
+      assert(await page.locator("#selection").isHidden());
+      await page.locator("#viewport").press("Enter");
       assert.deepEqual(await values(page), [0, 0, 1, 1]);
 
       await page.locator("#file").setInputFiles(file);
       await loaded(page);
       await page.locator("#file").setInputFiles(file);
       await loaded(page);
-      assert.deepEqual(await values(page), [160, 120, 320, 240]);
+      assert(await page.locator("#selection").isHidden());
+      assert.equal(await page.locator("#output").inputValue(), "");
       const drop = async (count: number) => {
         await page.locator("#viewport").evaluate(
           (node, { base64, count }) => {
@@ -829,6 +861,7 @@ try {
       await blockedPage.locator("#template").fill("{width},{height}");
       await blockedPage.locator("#file").setInputFiles(file);
       await loaded(blockedPage);
+      await blockedPage.locator("#viewport").press("Enter");
       assert.equal(
         await blockedPage.locator("#output").inputValue(),
         "320,240",
@@ -840,6 +873,7 @@ try {
       const large = await imageFile(page, 2400, 1800);
       await page.locator("#file").setInputFiles(large);
       await loaded(page);
+      await page.locator("#viewport").press("Enter");
       await page.locator("#actual-size").click();
       await setValues(page, [300, 250, 400, 300]);
       await page.locator("#viewport").evaluate((node) => {
@@ -999,6 +1033,7 @@ try {
       );
       await page.locator("#actual-size").tap();
       await page.locator("#fit").tap();
+      await page.locator("#viewport").press("Enter");
       await page.screenshot({
         path: `test-results/${name}-mobile-dark.png`,
         fullPage: true,
@@ -1117,6 +1152,8 @@ try {
     await page.keyboard.press("Escape");
     await page.locator("#file").setInputFiles(await imageFile(page, 1, 1));
     await loaded(page);
+    assert(await page.locator("#selection").isHidden());
+    await page.locator("#viewport").press("Enter");
     assert.equal(await page.locator("#output").inputValue(), "1x1+0+0");
     console.log("PASS subdirectory deployment");
 

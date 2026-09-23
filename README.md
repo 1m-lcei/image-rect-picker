@@ -15,7 +15,8 @@ Select a rectangular region in an image and copy its coordinates in your preferr
 ## Features
 
 - Open an image or drag and drop it into the workspace.
-- Draw, move, and resize a selection with a mouse, touch, or pen.
+- Images open without a selection. Drag to select a region, or focus the image workspace and press `Enter` to start a selection with the keyboard.
+- Move and resize a selection with a mouse, touch, or pen.
 - Enter coordinates directly, or use arrow keys for 1-pixel adjustments and `Shift` + `arrow` keys for 10 pixels.
 - Zoom around the cursor, fit the whole image, or view it at 100%. Coordinates always refer to the original image.
 - Pan with `Space` + drag, the middle mouse button, or the Pan mode button. Resize handles stay centered on each visible edge.
