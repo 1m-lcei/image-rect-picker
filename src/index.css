@@ -52,6 +52,7 @@
     font-size: 1.35rem;
     font-weight: 700;
     letter-spacing: 0.02em;
+    text-box: trim-both cap alphabetic;
   }
   h2 {
     font-size: 1.15rem;
@@ -120,6 +121,14 @@
     block-size: 2.2rem;
     flex: none;
   }
+  .brand-mark,
+  .about-mark {
+    color: var(--accent);
+  }
+  .about-mark {
+    inline-size: 4.75rem;
+    block-size: 4.75rem;
+  }
   .header-actions {
     margin-inline-start: auto;
     gap: 0.5rem;
@@ -131,17 +140,22 @@
     margin-block-end: 0.2rem;
   }
   .privacy-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
     font-size: 0.75rem;
     color: var(--muted);
   }
+  .privacy-badge > span {
+    text-box: trim-both cap alphabetic;
+  }
   .privacy-badge::before {
     content: "";
-    display: inline-block;
+    flex: none;
     inline-size: 0.4rem;
     block-size: 0.4rem;
     border-radius: 50%;
     background: light-dark(#28744a, #70d299);
-    margin-inline-end: 0.5rem;
   }
   .file-panel {
     position: relative;
@@ -347,9 +361,25 @@
     block-size: 2.5rem;
     padding: 0.5rem;
   }
-  .icon-button svg {
+  .icon-button svg,
+  .inline-icon {
     inline-size: 1.25rem;
     block-size: 1.25rem;
+    stroke-width: 1.8;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+  .icon-button svg,
+  .inline-icon,
+  #empty svg {
+    fill: none;
+    stroke: currentColor;
+  }
+  .inline-icon {
+    inline-size: 1em;
+    block-size: 1em;
+    margin-inline: 0.2em;
+    vertical-align: -0.15em;
   }
   #theme-toggle {
     --sun: none;
@@ -596,6 +626,7 @@
   #empty svg {
     inline-size: 4rem;
     block-size: 4rem;
+    stroke-width: 1.5;
     opacity: 0.65;
     margin-block-end: 0.25rem;
   }

@@ -1017,6 +1017,12 @@ try {
   try {
     const page = await browser.newPage();
     await page.goto(`http://127.0.0.1:${nestedAddress.port}/nested/`);
+    // External SVG references must render beneath a deployment subdirectory.
+    await page.waitForFunction(() =>
+      [...document.querySelectorAll<SVGUseElement>("svg use")]
+        .filter((node) => node.ownerSVGElement?.getBoundingClientRect().width)
+        .every((node) => node.getBBox().width > 0),
+    );
     await page.locator("#file").setInputFiles(await imageFile(page, 1, 1));
     await loaded(page);
     assert.equal(await page.locator("#output").inputValue(), "1x1+0+0");
@@ -1033,6 +1039,10 @@ try {
       const initial = await browser.newPage({ javaScriptEnabled: false });
       await initial.goto(`http://127.0.0.1:${devAddress.port}`);
       for (const selector of ["#help-trigger svg", "#empty svg"]) {
+        await initial.waitForFunction((selector) => {
+          const use = document.querySelector<SVGUseElement>(`${selector} use`);
+          return use && use.getBBox().width > 0;
+        }, selector);
         const box = await initial.locator(selector).boundingBox();
         assert(
           box &&

@@ -1,4 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" fill="none">
+<svg xmlns="http://www.w3.org/2000/svg" id="app-icon" viewBox="0 0 32 32" fill="none">
   <title>Image Rect Picker</title>
   <style>
     :root { color: #215cc5; }
