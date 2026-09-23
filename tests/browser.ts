@@ -146,18 +146,60 @@ try {
         external.push(request.url());
     });
     try {
+      // Native controls and CSS remain usable without script or anchor support.
+      const nativePage = await browser.newPage({
+        javaScriptEnabled: false,
+        viewport: { width: 390, height: 844 },
+        colorScheme: "dark",
+      });
+      await nativePage.route("**/*.css", async (route) => {
+        const response = await route.fetch();
+        await route.fulfill({
+          response,
+          body: (await response.text()).replaceAll(
+            "anchor(",
+            "unsupported-anchor(",
+          ),
+        });
+      });
+      await nativePage.goto(origin);
+      await nativePage.locator("#menu-trigger").click();
+      const fallbackBox = await nativePage
+        .locator("#header-menu")
+        .boundingBox();
+      assert(fallbackBox && fallbackBox.x >= 0 && fallbackBox.y >= 0);
+      assert(fallbackBox.x + fallbackBox.width <= 390);
+      assert(fallbackBox.y + fallbackBox.height <= 844);
+      for (const preference of ["light", "dark", "system"]) {
+        await nativePage
+          .locator(`input[name="theme"][value="${preference}"]`)
+          .check();
+        assert.equal(
+          await nativePage
+            .locator("html")
+            .evaluate((node) => getComputedStyle(node).colorScheme),
+          preference === "system" ? "light dark" : preference,
+        );
+      }
+      await nativePage.keyboard.press("Escape");
+      await nativePage.locator("#help-trigger").click();
+      await nativePage.getByRole("button", { name: "閉じる" }).click();
+      assert(await nativePage.locator("#help-dialog").isHidden());
+      await nativePage.close();
+
       await page.goto(origin);
       const menuTrigger = page.locator("#menu-trigger");
       const menu = page.locator("#header-menu");
       const themeToggle = page.locator("#theme-toggle");
       const checkTheme = async (preference: string, target: "sun" | "moon") => {
-        await page.waitForFunction(
-          ({ preference, target }) =>
-            document.documentElement.dataset.theme === preference &&
-            document
-              .querySelector(`#theme-toggle .${target}`)
-              ?.hasAttribute("hidden") === false,
-          { preference, target },
+        await page.waitForFunction((target) => {
+          const icon = document.querySelector(`#theme-toggle .${target}`);
+          return icon && getComputedStyle(icon).display !== "none";
+        }, target);
+        assert(
+          await themeToggle
+            .locator(target === "sun" ? ".moon" : ".sun")
+            .isHidden(),
         );
         assert.equal(
           await themeToggle.getAttribute("aria-label"),
@@ -255,6 +297,10 @@ try {
       await page.mouse.click(helpBox.x + 4, helpBox.y + 4);
       assert(await help.isVisible());
       await page.mouse.click(1, 1);
+      if (!(await help.evaluate((node) => "closedBy" in node))) {
+        assert(await help.isVisible());
+        await page.keyboard.press("Escape");
+      }
       assert(await help.isHidden());
       await page.waitForFunction(
         () => document.activeElement?.id === "help-trigger",
@@ -267,7 +313,7 @@ try {
       const file = await imageFile(page);
       let fileChoosers = 0;
       page.on("filechooser", () => fileChoosers++);
-      await page.locator("#choose-image").focus();
+      await page.locator("#file").focus();
       const chooser = page.waitForEvent("filechooser");
       await page.keyboard.press("Enter");
       await (await chooser).setFiles(file);
@@ -290,6 +336,11 @@ try {
       assert.equal(fileChoosers, 6);
       await page.locator("#clear svg").click();
       assert(await page.locator("#empty").isVisible());
+      assert(
+        await page
+          .locator("#file")
+          .evaluate((node) => node === document.activeElement),
+      );
       const clearBox = await page.locator("#clear").boundingBox();
       assert(clearBox);
       await page.mouse.click(

@@ -27,7 +27,6 @@ const viewport = element<HTMLElement>("viewport");
 const stage = element<HTMLDivElement>("stage");
 const imageElement = element<HTMLImageElement>("image");
 const selection = element<HTMLDivElement>("selection");
-const empty = element<HTMLDivElement>("empty");
 const coordinates = element<HTMLFieldSetElement>("coordinates");
 const zoomControls = element<HTMLFieldSetElement>("zoom-controls");
 const template = element<HTMLInputElement>("template");
@@ -43,41 +42,12 @@ const inputs = Object.fromEntries(
 const fitButton = element<HTMLButtonElement>("fit");
 const zoomValue = element<HTMLOutputElement>("zoom-value");
 const panButton = element<HTMLButtonElement>("pan");
-const handles = Array.from(
-  selection.querySelectorAll<HTMLButtonElement>(".handle"),
-);
+const handles = selection.querySelectorAll<HTMLButtonElement>(".handle");
 
 initTheme(element<HTMLButtonElement>("theme-toggle"));
 
 const menuTrigger = element<HTMLButtonElement>("menu-trigger");
-const menu = element("header-menu");
 element("about-dialog").addEventListener("close", () => menuTrigger.focus());
-if (!CSS.supports("position-anchor", "--header-menu")) {
-  const positionMenu = () => {
-    if (!menu.matches(":popover-open")) return;
-    const box = menuTrigger.getBoundingClientRect();
-    menu.style.top = `${Math.max(0, Math.min(box.bottom + 8, innerHeight - menu.offsetHeight))}px`;
-    menu.style.left = `${Math.max(0, box.right - menu.offsetWidth)}px`;
-  };
-  menu.addEventListener("toggle", positionMenu);
-  window.addEventListener("resize", positionMenu);
-  window.addEventListener("scroll", positionMenu, true);
-}
-if (!("closedBy" in HTMLDialogElement.prototype)) {
-  for (const dialog of document.querySelectorAll("dialog")) {
-    dialog.addEventListener("click", (event) => {
-      if (event.target !== dialog) return;
-      const box = dialog.getBoundingClientRect();
-      if (
-        event.clientX < box.left ||
-        event.clientX > box.right ||
-        event.clientY < box.top ||
-        event.clientY > box.bottom
-      )
-        dialog.close();
-    });
-  }
-}
 
 let image: LoadedImage | null = null;
 let rect: Rect | null = null;
@@ -224,7 +194,7 @@ function pointOnImage(client: Point): Point {
   return imagePoint(client, { x: box.left, y: box.top }, scale);
 }
 
-async function openFiles(files: FileList | File[]): Promise<void> {
+async function openFiles(files: FileList): Promise<void> {
   if (files.length === 0) return;
   const request = ++loadRequest;
   finishDrag(true);
@@ -258,7 +228,6 @@ async function openFiles(files: FileList | File[]): Promise<void> {
     element("image-size").textContent =
       `${next.width.toLocaleString("ja-JP")} × ${next.height.toLocaleString("ja-JP")} px`;
     stage.hidden = false;
-    empty.hidden = true;
     fitImage();
     status.textContent =
       "画像を開きました。背景のドラッグで範囲を作成できます。";
@@ -279,9 +248,8 @@ async function openFiles(files: FileList | File[]): Promise<void> {
   }
 }
 
-element("choose-image").addEventListener("click", () => fileInput.click());
 fileInput.addEventListener("change", () => {
-  if (fileInput.files) void openFiles(Array.from(fileInput.files));
+  if (fileInput.files) void openFiles(fileInput.files);
   fileInput.value = "";
 });
 
@@ -295,7 +263,6 @@ clear.addEventListener("click", () => {
   imageElement.removeAttribute("src");
   imageElement.alt = "";
   stage.hidden = true;
-  empty.hidden = false;
   viewport.setAttribute("aria-busy", "false");
   element("image-name").textContent = "画像を選択、または下の領域にドロップ";
   element("image-size").textContent = "すべての座標は画像の原寸ピクセルです";
@@ -310,7 +277,7 @@ clear.addEventListener("click", () => {
   showError("");
   renderRect();
   status.textContent = "画像をクリアしました。テンプレートは保持しています。";
-  element("choose-image").focus();
+  fileInput.focus();
 });
 
 for (const type of ["dragenter", "dragover"]) {

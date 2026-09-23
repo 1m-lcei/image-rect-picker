@@ -19,6 +19,12 @@
       ui-monospace, "Cascadia Code", "SFMono-Regular", Consolas, monospace;
     accent-color: var(--accent);
   }
+  :root:has(input[name="theme"][value="light"]:checked) {
+    color-scheme: light;
+  }
+  :root:has(input[name="theme"][value="dark"]:checked) {
+    color-scheme: dark;
+  }
   * {
     box-sizing: border-box;
   }
@@ -145,24 +151,23 @@
     border: 1px solid var(--border);
     border-radius: 0.65rem;
   }
-  #choose-image::after {
-    content: "";
+  #file {
     position: absolute;
     inset: 0;
+    block-size: 100%;
+    opacity: 0;
+    cursor: pointer;
   }
   #clear {
     position: relative;
     z-index: 1;
   }
-  .file-panel:has(#choose-image:hover) {
+  .file-panel:has(#file:hover) {
     border-color: var(--accent);
   }
-  .file-panel:has(#choose-image:focus-visible) {
+  .file-panel:has(#file:focus-visible) {
     outline: 3px solid var(--focus);
     outline-offset: 3px;
-  }
-  #choose-image:focus-visible {
-    outline: none;
   }
   .file-summary {
     min-inline-size: 0;
@@ -335,9 +340,27 @@
     inline-size: 1.25rem;
     block-size: 1.25rem;
   }
-  #choose-image {
-    border: 0;
-    background: transparent;
+  #theme-toggle {
+    --sun: none;
+    --moon: block;
+    @media (prefers-color-scheme: dark) {
+      --sun: block;
+      --moon: none;
+    }
+    .header-actions:has(input[value="light"]:checked) & {
+      --sun: none;
+      --moon: block;
+    }
+    .header-actions:has(input[value="dark"]:checked) & {
+      --sun: block;
+      --moon: none;
+    }
+    .sun {
+      display: var(--sun);
+    }
+    .moon {
+      display: var(--moon);
+    }
   }
   #copy {
     position: absolute;
@@ -373,10 +396,10 @@
   #header-menu {
     position: fixed;
     position-anchor: --header-menu;
-    inset: auto;
+    /* Without anchor positioning, the menu remains usable at the top right. */
+    inset: 1rem 1rem auto auto;
     top: calc(anchor(bottom) + 0.5rem);
-    left: anchor(right);
-    translate: -100% 0;
+    right: anchor(right);
     margin: 0;
     inline-size: 14rem;
     max-inline-size: calc(100% - 2rem);
@@ -471,9 +494,6 @@
   .dialog-header h2 {
     font-size: 1.05rem;
   }
-  .dialog-header form {
-    margin: 0;
-  }
   .guide-steps {
     display: grid;
     grid-template-columns: auto minmax(0, 1fr);
@@ -517,11 +537,6 @@
   }
   .about-links .link-placeholder {
     color: var(--muted);
-  }
-  @supports not (position-anchor: --header-menu) {
-    #header-menu {
-      translate: none;
-    }
   }
   @media (width < 30rem) {
     dialog {
@@ -567,6 +582,9 @@
     gap: 0.8rem;
     text-align: center;
     color: var(--muted);
+  }
+  #viewport:has(> #stage:not([hidden])) > #empty {
+    display: none;
   }
   #empty svg {
     inline-size: 4rem;
