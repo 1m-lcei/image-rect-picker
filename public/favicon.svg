@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" fill="none">
+  <title>Image Rect Picker</title>
+  <style>
+    :root { color: #215cc5; }
+    @media (prefers-color-scheme: dark) { :root { color: #9bbdff; } }
+  </style>
+  <path d="M3 11V3h8M21 3h8v8M29 21v8h-8M11 29H3v-8" stroke="currentColor" stroke-width="2"/>
+  <rect x="10" y="10" width="12" height="12" fill="currentColor" opacity=".2"/>
+</svg>

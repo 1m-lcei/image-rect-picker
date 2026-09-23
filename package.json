@@ -1,0 +1,26 @@
+{
+  "name": "image-rect-picker",
+  "private": true,
+  "version": "1.0.0",
+  "description": "画像上の矩形を選択し、原寸の座標を任意の形式で出力するローカル画像ツール",
+  "license": "MIT",
+  "packageManager": "bun@1.4.2",
+  "type": "module",
+  "scripts": {
+    "dev": "bun --bun vite",
+    "typecheck": "bun --bun tsc --noEmit && bun --bun tsc --noEmit -p tsconfig.tools.json",
+    "build": "bun run typecheck && bun --bun vite build",
+    "fix": "bun --bun biome check --write .",
+    "lint": "bun --bun biome check .",
+    "test": "bun test tests/core.test.ts",
+    "test:browser": "bun tests/browser.ts",
+    "preview": "bun --bun vite preview"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.5.14",
+    "@types/bun": "1.4.2",
+    "playwright": "1.63.0",
+    "typescript": "7.0.2",
+    "vite": "8.3.0"
+  }
+}
