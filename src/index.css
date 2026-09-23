@@ -415,6 +415,7 @@
     }
   }
   #copy {
+    anchor-name: --copy;
     position: absolute;
     inset-inline-end: 0.25rem;
     inset-block-start: 50%;
@@ -442,6 +443,49 @@
 }
 
 @layer overlays {
+  #copy-feedback {
+    position: fixed;
+    position-anchor: --copy;
+    /* Without anchor positioning, show the confirmation at the bottom right. */
+    inset: auto 1rem 1rem auto;
+    bottom: calc(anchor(top) + 0.5rem);
+    right: anchor(right);
+    margin: 0;
+    padding: 0.5rem 0.75rem;
+    border: 0;
+    border-radius: 0.4rem;
+    background: light-dark(#fff, #394559);
+    color: light-dark(#202b3d, #e4eaf4);
+    filter: drop-shadow(0 2px 4px #0003);
+    font-size: 0.8rem;
+    white-space: nowrap;
+    overflow: visible;
+    pointer-events: none;
+    &:not([hidden]) {
+      animation: copy-feedback-fade 0.5s ease-out 1.5s forwards;
+      @media (prefers-reduced-motion: reduce) {
+        animation-duration: 1ms;
+      }
+    }
+    @supports (anchor-name: --copy) {
+      &::after {
+        content: "";
+        position: absolute;
+        top: 100%;
+        right: 0.5rem;
+        border: 0.375rem solid transparent;
+        border-top-color: light-dark(#fff, #394559);
+      }
+    }
+  }
+  @keyframes copy-feedback-fade {
+    from {
+      opacity: 1;
+    }
+    to {
+      opacity: 0;
+    }
+  }
   #menu-trigger {
     anchor-name: --header-menu;
   }

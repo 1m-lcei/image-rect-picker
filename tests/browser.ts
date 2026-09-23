@@ -541,6 +541,82 @@ try {
         await page.locator("body").getAttribute("data-copied"),
         await page.locator("#output").inputValue(),
       );
+      const copyFeedback = page.locator("#copy-feedback");
+      assert.equal(await copyFeedback.textContent(), "コピーしました");
+      assert(await copyFeedback.isVisible());
+      for (const preference of ["dark", "light"]) {
+        await page.locator("#menu-trigger").click();
+        await page
+          .locator(`input[name="theme"][value="${preference}"]`)
+          .check();
+        await page.keyboard.press("Escape");
+        await page.locator("#copy").click();
+        const colors = await copyFeedback.evaluate((node) => {
+          const style = getComputedStyle(node);
+          return {
+            scheme: style.colorScheme,
+            background: style.backgroundColor,
+            text: style.color,
+            arrow: getComputedStyle(node, "::after").borderTopColor,
+          };
+        });
+        assert.equal(colors.scheme, preference);
+        assert.equal(colors.arrow, colors.background);
+        assert(
+          colors.background
+            .match(/\d+/g)
+            ?.every((value) =>
+              preference === "light"
+                ? Number(value) > 200
+                : Number(value) < 100,
+            ),
+          "The bubble background follows the selected theme",
+        );
+        assert(
+          colors.text
+            .match(/\d+/g)
+            ?.every((value) =>
+              preference === "light"
+                ? Number(value) < 100
+                : Number(value) > 200,
+            ),
+        );
+        await page.screenshot({
+          path: `test-results/${name}-copy-${preference}.png`,
+        });
+      }
+      await page.waitForTimeout(1200);
+      await page.locator("#copy").click();
+      await page.waitForTimeout(1200);
+      assert(
+        await copyFeedback.isVisible(),
+        "Repeated copy restarts the timer",
+      );
+      await page.waitForFunction(() => {
+        const feedback = document.getElementById("copy-feedback");
+        if (!feedback || feedback.hidden) return false;
+        const opacity = Number(getComputedStyle(feedback).opacity);
+        return opacity > 0 && opacity < 1;
+      });
+      await page.locator("#copy").click();
+      assert.equal(
+        await copyFeedback.evaluate((node) => getComputedStyle(node).opacity),
+        "1",
+        "Copying during fade-out restores full opacity",
+      );
+      await copyFeedback.waitFor({ state: "hidden" });
+      await page.emulateMedia({ reducedMotion: "reduce" });
+      await page.locator("#copy").click();
+      assert.equal(
+        await copyFeedback.evaluate(
+          (node) => getComputedStyle(node).animationDuration,
+        ),
+        "0.001s",
+      );
+      await copyFeedback.waitFor({ state: "hidden" });
+      await page.emulateMedia({ reducedMotion: "no-preference" });
+      await page.locator("#copy").click();
+      await copyFeedback.waitFor({ state: "visible" });
       await page.evaluate(() => {
         Object.defineProperty(navigator, "clipboard", {
           configurable: true,
@@ -553,6 +629,10 @@ try {
       });
       await page.locator("#copy").click();
       await page.waitForFunction(() => document.activeElement?.id === "output");
+      assert(
+        await copyFeedback.isHidden(),
+        "Failed copy must not show success",
+      );
       assert.equal(
         await page
           .locator("#output")

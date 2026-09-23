@@ -32,6 +32,7 @@ const zoomControls = element<HTMLFieldSetElement>("zoom-controls");
 const template = element<HTMLInputElement>("template");
 const output = element<HTMLInputElement>("output");
 const copy = element<HTMLButtonElement>("copy");
+const copyFeedback = element<HTMLSpanElement>("copy-feedback");
 const clear = element<HTMLButtonElement>("clear");
 const errorBox = element<HTMLDivElement>("error");
 const status = element<HTMLParagraphElement>("status");
@@ -524,11 +525,20 @@ template.addEventListener("input", () => {
   settings.template = template.value;
   saveSettings(settings);
 });
+copyFeedback.addEventListener("animationend", () => {
+  copyFeedback.hidePopover?.();
+  copyFeedback.hidden = true;
+});
 copy.addEventListener("click", async () => {
   const text = output.value;
+  copyFeedback.hidePopover?.();
+  copyFeedback.hidden = true;
   try {
     await navigator.clipboard.writeText(text);
-    status.textContent = "座標をコピーしました。";
+    copyFeedback.hidden = false;
+    copyFeedback.showPopover?.();
+    for (const animation of copyFeedback.getAnimations())
+      animation.currentTime = 0;
   } catch {
     output.focus();
     output.select();
