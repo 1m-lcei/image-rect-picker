@@ -14,7 +14,6 @@ import {
 import { type LoadedImage, loadImage } from "./image";
 import { DEFAULT_TEMPLATE, formatRect } from "./output";
 import { initTheme } from "./theme";
-import "./index.css";
 
 function element<T extends HTMLElement>(id: string): T {
   const node = document.getElementById(id);
@@ -48,6 +47,23 @@ initTheme(element<HTMLButtonElement>("theme-toggle"));
 
 const menuTrigger = element<HTMLButtonElement>("menu-trigger");
 element("about-dialog").addEventListener("close", () => menuTrigger.focus());
+
+// Without a close button, touch users also need light dismiss in older browsers.
+if (!("closedBy" in HTMLDialogElement.prototype)) {
+  for (const dialog of document.querySelectorAll("dialog")) {
+    dialog.addEventListener("click", (event) => {
+      if (event.target !== dialog) return;
+      const box = dialog.getBoundingClientRect();
+      if (
+        event.clientX < box.left ||
+        event.clientX > box.right ||
+        event.clientY < box.top ||
+        event.clientY > box.bottom
+      )
+        dialog.close();
+    });
+  }
+}
 
 let image: LoadedImage | null = null;
 let rect: Rect | null = null;

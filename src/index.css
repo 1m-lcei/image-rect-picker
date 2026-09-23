@@ -484,14 +484,8 @@
   dialog::backdrop {
     background: #0008;
   }
-  .dialog-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 1rem;
+  .dialog-title {
     margin-block-end: 1rem;
-  }
-  .dialog-header h2 {
     font-size: 1.05rem;
   }
   .guide-steps {

@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { mkdir } from "node:fs/promises";
 import { chromium, firefox, type Page, webkit } from "playwright";
-import { preview } from "vite";
+import { createServer, preview } from "vite";
 
 await mkdir("test-results", { recursive: true });
 const server = await preview({
@@ -183,11 +183,37 @@ try {
       }
       await nativePage.keyboard.press("Escape");
       await nativePage.locator("#help-trigger").click();
-      await nativePage.getByRole("button", { name: "閉じる" }).click();
+      await nativePage.keyboard.press("Escape");
       assert(await nativePage.locator("#help-dialog").isHidden());
       await nativePage.close();
 
+      // Older touch browsers must still dismiss dialogs without a close button.
+      const legacyPage = await context.newPage();
+      await legacyPage.addInitScript(() => {
+        Reflect.deleteProperty(HTMLDialogElement.prototype, "closedBy");
+      });
+      await legacyPage.route("**/", async (route) => {
+        const response = await route.fetch();
+        await route.fulfill({
+          response,
+          body: (await response.text()).replaceAll('closedby="any"', ""),
+        });
+      });
+      await legacyPage.goto(origin);
+      await legacyPage.locator("#help-trigger").tap();
+      const legacyBox = await legacyPage.locator("#help-dialog").boundingBox();
+      assert(legacyBox);
+      await legacyPage.touchscreen.tap(legacyBox.x + 4, legacyBox.y + 4);
+      assert(await legacyPage.locator("#help-dialog").isVisible());
+      await legacyPage.touchscreen.tap(1, 1);
+      assert(await legacyPage.locator("#help-dialog").isHidden());
+      await legacyPage.close();
+
       await page.goto(origin);
+      assert.equal(
+        await page.locator('dialog button[aria-label="閉じる"]').count(),
+        0,
+      );
       const menuTrigger = page.locator("#menu-trigger");
       const menu = page.locator("#header-menu");
       const themeToggle = page.locator("#theme-toggle");
@@ -297,16 +323,12 @@ try {
       await page.mouse.click(helpBox.x + 4, helpBox.y + 4);
       assert(await help.isVisible());
       await page.mouse.click(1, 1);
-      if (!(await help.evaluate((node) => "closedBy" in node))) {
-        assert(await help.isVisible());
-        await page.keyboard.press("Escape");
-      }
       assert(await help.isHidden());
       await page.waitForFunction(
         () => document.activeElement?.id === "help-trigger",
       );
       await helpTrigger.click();
-      await help.getByRole("button", { name: "閉じる" }).click();
+      await page.keyboard.press("Escape");
       assert(await help.isHidden());
       assert(await page.locator("#empty").isVisible());
       assert(await page.locator("#copy").isDisabled());
@@ -813,7 +835,8 @@ try {
       assert(menuBox && menuBox.x >= 0 && menuBox.x + menuBox.width <= 390);
       await page.screenshot({ path: `test-results/${name}-mobile-menu.png` });
       await page.locator("#about-trigger").tap();
-      await about.getByRole("button", { name: "閉じる" }).tap();
+      await page.touchscreen.tap(1, 1);
+      assert(await about.isHidden());
       await helpTrigger.tap();
       const mobileHelpBox = await help.boundingBox();
       assert(
@@ -822,7 +845,8 @@ try {
           mobileHelpBox.x + mobileHelpBox.width <= 390,
       );
       await page.screenshot({ path: `test-results/${name}-mobile-help.png` });
-      await help.getByRole("button", { name: "閉じる" }).tap();
+      await page.touchscreen.tap(1, 1);
+      assert(await help.isHidden());
 
       if (name === "chromium" || name === "edge") {
         const session = await context.newCDPSession(page);
@@ -913,6 +937,32 @@ try {
     await loaded(page);
     assert.equal(await page.locator("#output").inputValue(), "1x1+0+0");
     console.log("PASS subdirectory deployment");
+
+    // CSS must size icons before the development entry script can run.
+    const dev = await createServer({
+      server: { host: "127.0.0.1", port: 0, open: false },
+    });
+    try {
+      await dev.listen();
+      const devAddress = dev.httpServer?.address();
+      assert(devAddress && typeof devAddress !== "string");
+      const initial = await browser.newPage({ javaScriptEnabled: false });
+      await initial.goto(`http://127.0.0.1:${devAddress.port}`);
+      for (const selector of ["#help-trigger svg", "#empty svg"]) {
+        const box = await initial.locator(selector).boundingBox();
+        assert(
+          box &&
+            box.width > 0 &&
+            box.width <= 64 &&
+            box.height > 0 &&
+            box.height <= 64,
+        );
+      }
+      await initial.close();
+      console.log("PASS initial icon sizing without JavaScript");
+    } finally {
+      await dev.close();
+    }
   } finally {
     await browser.close();
     await new Promise<void>((resolve) =>
