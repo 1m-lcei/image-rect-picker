@@ -12,7 +12,8 @@ import {
   visibleHandles,
 } from "./geometry";
 import { type LoadedImage, loadImage } from "./image";
-import { DEFAULT_TEMPLATE, formatRect } from "./output";
+import { formatRect } from "./output";
+import { loadSettings, saveSettings } from "./settings";
 import { initTheme } from "./theme";
 
 function element<T extends HTMLElement>(id: string): T {
@@ -43,7 +44,9 @@ const zoomValue = element<HTMLOutputElement>("zoom-value");
 const panButton = element<HTMLButtonElement>("pan");
 const handles = selection.querySelectorAll<HTMLButtonElement>(".handle");
 
-initTheme(element<HTMLButtonElement>("theme-toggle"));
+const settings = loadSettings();
+initTheme(element<HTMLButtonElement>("theme-toggle"), settings);
+saveSettings(settings);
 
 const menuTrigger = element<HTMLButtonElement>("menu-trigger");
 element("about-dialog").addEventListener("close", () => menuTrigger.focus());
@@ -83,7 +86,7 @@ let drag: {
   moved: boolean;
 } | null = null;
 
-template.value = DEFAULT_TEMPLATE;
+template.value = settings.template;
 
 function showError(message: string): void {
   element("error-text").textContent = message;
@@ -175,7 +178,6 @@ function renderScale(): void {
   stage.style.width = `${image.width * scale}px`;
   stage.style.height = `${image.height * scale}px`;
   zoomValue.value = `${Number((scale * 100).toFixed(2))}%`;
-  fitButton.setAttribute("aria-pressed", String(fit));
   renderRect();
 }
 
@@ -243,8 +245,7 @@ async function openFiles(files: FileList): Promise<void> {
     element("image-name").textContent = next.name;
     stage.hidden = false;
     fitImage();
-    status.textContent =
-      "画像を開きました。";
+    status.textContent = "画像を開きました。";
   } catch (error) {
     if (request !== loadRequest) return;
     showError(
@@ -286,7 +287,6 @@ clear.addEventListener("click", () => {
   }
   zoomValue.value = "—";
   fit = true;
-  fitButton.setAttribute("aria-pressed", "true");
   showError("");
   renderRect();
   status.textContent = "画像をクリアしました。";
@@ -521,6 +521,8 @@ for (const field of fields) {
 
 template.addEventListener("input", () => {
   output.value = formatRect(rect, template.value);
+  settings.template = template.value;
+  saveSettings(settings);
 });
 copy.addEventListener("click", async () => {
   const text = output.value;

@@ -71,6 +71,7 @@
   legend {
     font-size: 0.8rem;
     font-weight: 650;
+    line-height: 1.5;
   }
   label {
     display: block;
@@ -317,13 +318,21 @@
     background: light-dark(#16499f, #bbd1ff);
     color: light-dark(#fff, #101d35);
   }
+  #coordinates input,
+  .zoom-buttons > button,
+  #zoom-value {
+    block-size: 2.5rem;
+    line-height: 1.5;
+  }
   .zoom-buttons {
     gap: 0.4rem;
   }
   #zoom-value {
+    display: grid;
+    place-items: center;
     min-inline-size: 4rem;
     text-align: center;
-    font: 0.85rem var(--mono);
+    font: 0.85rem / 1.5 var(--mono);
   }
   [aria-pressed="true"] {
     border-color: var(--accent);

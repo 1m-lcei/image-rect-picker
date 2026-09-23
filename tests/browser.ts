@@ -243,6 +243,61 @@ try {
         );
       };
       await checkTheme("system", "moon");
+      const bounds = await page
+        .locator("#coordinates input, .zoom-buttons > *")
+        .evaluateAll((nodes) =>
+          nodes.map((node) => {
+            const { top, bottom } = node.getBoundingClientRect();
+            return { top, bottom };
+          }),
+        );
+      for (const box of bounds) assert.deepEqual(box, bounds[0]);
+      const legends = await page
+        .locator(".controls legend")
+        .evaluateAll((nodes) =>
+          nodes.map((node) => node.getBoundingClientRect().top),
+        );
+      assert.equal(legends[0], legends[1]);
+
+      // Preferences survive reload; the default template is not stored.
+      const storedSettings = () =>
+        page.evaluate(() =>
+          JSON.parse(
+            localStorage.getItem("image-rect-picker.settings") ?? "null",
+          ),
+        );
+      assert.deepEqual(await storedSettings(), { version: 1, theme: "system" });
+      await themeToggle.click();
+      for (const template of ["{x},{y},{width},{height}", ""]) {
+        await page.locator("#template").fill(template);
+        await page.reload();
+        await checkTheme("dark", "sun");
+        assert.equal(await page.locator("#template").inputValue(), template);
+        assert.deepEqual(await storedSettings(), {
+          version: 1,
+          theme: "dark",
+          template,
+        });
+      }
+      await page.locator("#template").fill("{width}x{height}+{x}+{y}");
+      assert.deepEqual(await storedSettings(), { version: 1, theme: "dark" });
+      for (const saved of [
+        "broken JSON",
+        "null",
+        '{"version":2,"theme":"dark","template":"ignored"}',
+        '{"version":1,"theme":"invalid","template":42}',
+      ]) {
+        await page.evaluate((saved) => {
+          localStorage.setItem("image-rect-picker.settings", saved);
+        }, saved);
+        await page.reload();
+        await checkTheme("system", "moon");
+        assert.equal(
+          await page.locator("#template").inputValue(),
+          "{width}x{height}+{x}+{y}",
+        );
+      }
+
       await themeToggle.click();
       await checkTheme("dark", "sun");
       await page.emulateMedia({ colorScheme: "dark" });
@@ -260,6 +315,7 @@ try {
       await menuTrigger.click();
       await page.getByRole("radio", { name: "ライト", exact: true }).check();
       await checkTheme("light", "moon");
+      assert.deepEqual(await storedSettings(), { version: 1, theme: "light" });
       await page.emulateMedia({ colorScheme: "dark" });
       await checkTheme("light", "moon");
       await page.getByRole("radio", { name: "ダーク", exact: true }).check();
@@ -663,6 +719,33 @@ try {
         "{x},{y},{width},{height},{x2},{y2},{x},<b>{unknown}</b>",
       );
       await page.reload();
+
+      assert.equal(
+        await page.locator("#template").inputValue(),
+        "{x},{y},{width},{height},{x2},{y2},{x},<b>{unknown}</b>",
+      );
+      assert(await page.locator("#empty").isVisible());
+
+      const blockedPage = await context.newPage();
+      blockedPage.on("pageerror", (error) => errors.push(error.message));
+      await blockedPage.addInitScript(() => {
+        Object.defineProperty(window, "localStorage", {
+          get() {
+            throw new DOMException("Storage blocked", "SecurityError");
+          },
+        });
+      });
+      await blockedPage.goto(origin);
+      await blockedPage.locator("#theme-toggle").click();
+      await blockedPage.locator("#template").fill("{width},{height}");
+      await blockedPage.locator("#file").setInputFiles(file);
+      await loaded(blockedPage);
+      assert.equal(
+        await blockedPage.locator("#output").inputValue(),
+        "320,240",
+      );
+      assert(await blockedPage.locator("#image").isVisible());
+      await blockedPage.close();
 
       // Large image: scrolling and zooming must not change original coordinates.
       const large = await imageFile(page, 2400, 1800);

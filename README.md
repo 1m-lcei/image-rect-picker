@@ -5,7 +5,7 @@
 
   <p><strong>Precise image regions. Coordinates in your format.</strong></p>
   
-  <p>Your images stay in your browser. Nothing is uploaded or saved.</p>
+  <p>Your images stay in your browser. Images are never uploaded or saved.</p>
 </div>
 
 <hr>
@@ -21,7 +21,7 @@ Select a rectangular region in an image and copy its coordinates in your preferr
 - Pan with `Space` + drag, the middle mouse button, or the Pan mode button. Resize handles stay centered on each visible edge.
 - Toggle light and dark with the top-right button, or choose System, Light, or Dark from the menu.
 - Customize the output template and copy the result.
-- Replace or clear the image while keeping your template. Reloading the page resets everything.
+- Theme and output template are remembered in this browser. Images and selections reset on reload.
 
 ## Output format
 

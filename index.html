@@ -68,11 +68,11 @@
         <fieldset id="zoom-controls" disabled>
           <legend>表示倍率</legend>
           <div class="zoom-buttons">
-            <button id="zoom-out" type="button" aria-label="縮小">−</button>
+            <button id="zoom-out" class="icon-button" type="button" aria-label="縮小">−</button>
             <output id="zoom-value" aria-label="現在の表示倍率">—</output>
-            <button id="zoom-in" type="button" aria-label="拡大">＋</button>
+            <button id="zoom-in" class="icon-button" type="button" aria-label="拡大">＋</button>
             <button id="actual-size" type="button">100%</button>
-            <button id="fit" class="icon-button" type="button" aria-label="全体表示" title="全体表示" aria-pressed="true">
+            <button id="fit" class="icon-button" type="button" aria-label="全体表示" title="全体表示">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3H3v5m13-5h5v5M3 16v5h5m13-5v5h-5"/><rect x="7" y="7" width="10" height="10" rx="1"/></svg>
             </button>
             <button id="pan" class="icon-button" type="button" aria-label="パン" aria-pressed="false" title="パン：ドラッグで表示位置を移動（Space＋ドラッグ または マウス中ボタン＋ドラッグでも操作可能）">
@@ -137,7 +137,7 @@
         <dt>取り消し</dt><dd>Escapeでドラッグ開始前の状態に戻します。</dd>
         <dt>座標をコピー</dt><dd>出力欄のコピーボタンを押します。出力テンプレートには {x} {y} {width} {height} {x2} {y2} を使えます。</dd>
       </dl>
-      <p class="hint">座標は画像の原寸ピクセルです。右端・下端は範囲に含まない境界で、x2 = x + 幅、y2 = y + 高さです。画像と設定はページを閉じると消えます。</p>
+      <p class="hint">座標は画像の原寸ピクセルです。右端・下端は範囲に含まない境界で、x2 = x + 幅、y2 = y + 高さです。テーマと出力テンプレートはこのブラウザに保存されます。画像はページを閉じると消えます。</p>
     </dialog>
     <dialog id="about-dialog" aria-labelledby="about-title" closedby="any">
       <h2 id="about-title" class="dialog-title">このサイトについて</h2>
