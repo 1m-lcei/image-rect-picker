@@ -17,12 +17,12 @@
           <h1>画像領域ピッカー</h1>
         </div>
         <div class="header-actions">
+          <button id="help-trigger" class="icon-button" type="button" commandfor="help-dialog" command="show-modal" aria-label="操作ガイド" title="操作ガイド" aria-haspopup="dialog">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.2 9a2.8 2.8 0 1 1 4.7 2c-1.1.7-1.9 1.2-1.9 2.5M12 17h.01"/></svg>
+          </button>
           <button id="theme-toggle" class="icon-button" type="button" aria-label="テーマの切り替え" title="テーマの切り替え" hidden>
             <svg class="sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.5 1.5m11 11L19 19M5 19l1.5-1.5m11-11L19 5"/></svg>
             <svg class="moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.8 13.2A9 9 0 0 1 10.8 3.2a9 9 0 1 0 10 10Z"/></svg>
-          </button>
-          <button id="help-trigger" class="icon-button" type="button" commandfor="help-dialog" command="show-modal" aria-label="操作ガイド" title="操作ガイド" aria-haspopup="dialog">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.2 9a2.8 2.8 0 1 1 4.7 2c-1.1.7-1.9 1.2-1.9 2.5M12 17h.01"/></svg>
           </button>
           <button id="menu-trigger" class="icon-button" type="button" popovertarget="header-menu" aria-label="メニュー" title="メニュー">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
@@ -134,7 +134,6 @@
         <dt>範囲を選ぶ</dt><dd>背景をドラッグして作成。枠内で移動、四辺のハンドルでサイズを調整できます。数値入力でも変更できます。</dd>
         <dt>微調整</dt><dd>枠やハンドルにフォーカスして矢印キーで1px、Shift＋矢印キーで10px調整します。</dd>
         <dt>拡大・移動</dt><dd>ホイールで拡大・縮小。「パン」を選んでドラッグすると表示位置を移動できます。Space＋ドラッグ・マウスの中ボタンでもパンできます。</dd>
-        <dt>取り消し</dt><dd>Escapeでドラッグ開始前の状態に戻します。</dd>
         <dt>座標をコピー</dt><dd>出力欄のコピーボタンを押します。出力テンプレートには {x} {y} {width} {height} {x2} {y2} を使えます。</dd>
       </dl>
       <p class="hint">座標は画像の原寸ピクセルです。右端・下端は範囲に含まない境界で、x2 = x + 幅、y2 = y + 高さです。テーマと出力テンプレートはこのブラウザに保存されます。画像はページを閉じると消えます。</p>
