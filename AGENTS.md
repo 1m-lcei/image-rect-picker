@@ -1,5 +1,6 @@
 # Project context
 
+- When `.codegraph/` exists, use CodeGraph before text searches or file reads to locate or understand code: `codegraph_explore` with this project's path, or `codegraph explore`. Otherwise, or for unindexed content, use file tools.
 - A static SPA built with Bun, Vite, TypeScript, and native HTML/CSS. Keep browser runtime dependencies at zero; use Bun and `bun.lock`.
 - Images and templates stay in browser memory. No uploads, analytics, or persistent storage.
 - One image and one rectangle. Coordinates are integers in original-image pixels, independent of zoom; width/height are at least 1 and the rectangle stays inside the image. Right/bottom edges are exclusive.

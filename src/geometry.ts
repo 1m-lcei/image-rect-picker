@@ -107,3 +107,29 @@ export function fitScale(image: Size, viewport: Size): number {
     Math.max(1, viewport.height) / image.height,
   );
 }
+
+export function visibleHandles(
+  rect: Rect,
+  view: Rect,
+): Record<Exclude<Handle, "move">, Point | null> {
+  const left = Math.max(rect.x, view.x);
+  const top = Math.max(rect.y, view.y);
+  const right = Math.min(rect.x + rect.width, view.x + view.width);
+  const bottom = Math.min(rect.y + rect.height, view.y + view.height);
+  if (right < left || bottom < top)
+    return { n: null, s: null, w: null, e: null };
+  const x = (left + right) / 2;
+  const y = (top + bottom) / 2;
+  return {
+    n: rect.y >= view.y ? { x, y: rect.y } : null,
+    s:
+      rect.y + rect.height <= view.y + view.height
+        ? { x, y: rect.y + rect.height }
+        : null,
+    w: rect.x >= view.x ? { x: rect.x, y } : null,
+    e:
+      rect.x + rect.width <= view.x + view.width
+        ? { x: rect.x + rect.width, y }
+        : null,
+  };
+}

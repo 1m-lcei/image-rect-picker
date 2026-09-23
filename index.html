@@ -15,21 +15,28 @@
           <img class="brand-mark" src="/favicon.svg" alt="" width="32" height="32" />
           <div><p class="eyebrow">IMAGE RECT PICKER</p><h1>画像領域ピッカー</h1></div>
         </div>
-        <span class="privacy-badge">画像はブラウザの外に出ません</span>
+        <div class="header-actions">
+          <span class="privacy-badge">画像はブラウザの外に出ません</span>
+          <button id="theme-toggle" class="icon-button" type="button" aria-label="テーマの切り替え" title="テーマの切り替え" hidden>
+            <svg class="sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.5 1.5m11 11L19 19M5 19l1.5-1.5m11-11L19 5"/></svg>
+            <svg class="moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.8 13.2A9 9 0 0 1 10.8 3.2a9 9 0 1 0 10 10Z"/></svg>
+          </button>
+        </div>
       </header>
 
       <section class="file-panel" aria-label="画像を開く">
-        <div class="file-control">
-          <label for="file">画像ファイル</label>
-          <input id="file" type="file" accept="image/png,image/jpeg,image/webp,image/gif,image/bmp" hidden />
-          <button id="choose-image" type="button" aria-describedby="file-hint">画像を選ぶ</button>
-          <p id="file-hint" class="hint">PNG・JPEG・WebP・GIF・BMP / 20 MiB・50メガピクセル以下</p>
-        </div>
+        <input id="file" type="file" aria-label="画像ファイル" accept="image/png,image/jpeg,image/webp,image/gif,image/bmp" hidden />
+        <button id="choose-image" class="icon-button" type="button" aria-label="画像を選ぶ" title="画像を選ぶ" aria-describedby="file-hint">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-8M16 4h6m-3-3v6M3 17l5-5 4 4 3-3 6 6"/><circle cx="8" cy="8" r="1"/></svg>
+        </button>
         <div class="file-summary">
           <p id="image-name">画像を選択、または下の領域にドロップ</p>
           <p id="image-size" class="hint">すべての座標は画像の原寸ピクセルです</p>
         </div>
-        <button id="clear" type="button" disabled>画像をクリア</button>
+        <p id="file-hint" class="hint">PNG・JPEG・WebP・GIF・BMP / 20 MiB・50メガピクセル以下</p>
+        <button id="clear" class="icon-button" type="button" aria-label="画像をクリア" title="画像をクリア" disabled>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18M9 6V3h6v3M5 6l1 15h12l1-15M10 10v7m4-7v7"/></svg>
+        </button>
       </section>
 
       <div class="controls">
@@ -49,7 +56,12 @@
             <output id="zoom-value" aria-label="現在の表示倍率">—</output>
             <button id="zoom-in" type="button" aria-label="拡大">＋</button>
             <button id="actual-size" type="button">100%</button>
-            <button id="fit" type="button" aria-pressed="true">全体表示</button>
+            <button id="fit" class="icon-button" type="button" aria-label="全体表示" title="全体表示" aria-pressed="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3H3v5m13-5h5v5M3 16v5h5m13-5v5h-5"/><rect x="7" y="7" width="10" height="10" rx="1"/></svg>
+            </button>
+            <button id="pan" class="icon-button" type="button" aria-label="パン" aria-pressed="false" title="パン：ドラッグで表示位置を移動（Space＋ドラッグ・中ボタンでも操作可能）">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 12V5a1.5 1.5 0 0 1 3 0v6-8a1.5 1.5 0 0 1 3 0v8-6a1.5 1.5 0 0 1 3 0v7-3a1.5 1.5 0 0 1 3 0v7a6 6 0 0 1-6 6h-1a6 6 0 0 1-5-3L3 12a1.5 1.5 0 0 1 2-2Z"/></svg>
+            </button>
           </div>
         </fieldset>
       </div>
@@ -59,7 +71,9 @@
           <label for="output">出力</label>
           <div class="copy-row">
             <input id="output" type="text" readonly placeholder="画像を開くと座標が表示されます" spellcheck="false" />
-            <button id="copy" class="primary" type="button" disabled>コピー</button>
+            <button id="copy" class="primary icon-button" type="button" aria-label="コピー" title="コピー" disabled>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="8" y="8" width="13" height="13" rx="2"/><path d="M16 8V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h3"/></svg>
+            </button>
           </div>
         </div>
         <div>
@@ -97,7 +111,7 @@
         <p id="status" role="status" aria-live="polite">画像を開いて始めましょう。</p>
         <details>
           <summary>操作ガイド</summary>
-          <p id="interaction-hint">背景をドラッグして範囲を作成。枠内で移動、四辺のハンドルでサイズを調整できます。枠やハンドルにフォーカスして矢印キーで1px、Shift + 矢印キーで10px調整。Escapeでドラッグを取り消します。ホイールで拡大・縮小、スクロールバーで画像を移動できます。</p>
+          <p id="interaction-hint">背景をドラッグして範囲を作成。枠内で移動、四辺のハンドルでサイズを調整できます。枠やハンドルにフォーカスして矢印キーで1px、Shift + 矢印キーで10px調整。Escapeでドラッグを取り消します。ホイールで拡大・縮小。「パン」を選んでドラッグすると表示位置を移動できます。Space＋ドラッグ・マウスの中ボタンでもパンできます。</p>
           <p>右端・下端は範囲に含まない境界です。x2 = x + 幅、y2 = y + 高さ。画像と設定はページを閉じると消えます。</p>
         </details>
       </footer>

@@ -9,6 +9,7 @@ import {
   initialRect,
   type Rect,
   type Size,
+  visibleHandles,
 } from "../src/geometry";
 import {
   ACCEPTED_TYPES,
@@ -190,4 +191,41 @@ test("拡張子やMIMEを偽ったSVGを受け付けない", () => {
     validateSignature("image/jpeg", new Uint8Array([255, 216, 255])),
   ).not.toThrow();
   expect(() => validateSignature("image/png", bytes("BM"))).toThrow();
+});
+
+test("ハンドルは各辺の見えている部分の中央に配置する", () => {
+  const view = { x: 100, y: 200, width: 400, height: 300 };
+  expect(
+    visibleHandles({ x: 150, y: -1000, width: 200, height: 3000 }, view),
+  ).toEqual({
+    n: null,
+    s: null,
+    w: { x: 150, y: 350 },
+    e: { x: 350, y: 350 },
+  });
+  expect(
+    visibleHandles({ x: -1000, y: 250, width: 3000, height: 100 }, view),
+  ).toEqual({
+    n: { x: 300, y: 250 },
+    s: { x: 300, y: 350 },
+    w: null,
+    e: null,
+  });
+  expect(
+    visibleHandles({ x: 50, y: 100, width: 200, height: 300 }, view),
+  ).toEqual({
+    n: null,
+    s: { x: 175, y: 400 },
+    w: null,
+    e: { x: 250, y: 300 },
+  });
+  expect(visibleHandles({ x: 0, y: 0, width: 10, height: 10 }, view)).toEqual({
+    n: null,
+    s: null,
+    w: null,
+    e: null,
+  });
+  expect(
+    visibleHandles({ x: 150, y: 250, width: 1, height: 1 }, view).n,
+  ).toEqual({ x: 150.5, y: 250 });
 });

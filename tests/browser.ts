@@ -141,6 +141,42 @@ try {
     });
     try {
       await page.goto(origin);
+      const themeToggle = page.locator("#theme-toggle");
+      const checkTheme = async (preference: string, target: "sun" | "moon") => {
+        await page.waitForFunction(
+          ({ preference, target }) =>
+            document.documentElement.dataset.theme === preference &&
+            document
+              .querySelector(`#theme-toggle .${target}`)
+              ?.hasAttribute("hidden") === false,
+          { preference, target },
+        );
+        assert.equal(
+          await themeToggle.getAttribute("aria-label"),
+          "テーマの切り替え",
+        );
+        assert.equal(
+          await page
+            .locator("html")
+            .evaluate((node) => getComputedStyle(node).colorScheme),
+          preference === "system" ? "light dark" : preference,
+        );
+      };
+      await checkTheme("system", "moon");
+      await themeToggle.click();
+      await checkTheme("dark", "sun");
+      await page.emulateMedia({ colorScheme: "dark" });
+      await checkTheme("dark", "sun");
+      await themeToggle.click();
+      await checkTheme("light", "moon");
+      await themeToggle.click();
+      await checkTheme("system", "sun");
+      await page.emulateMedia({ colorScheme: "light" });
+      await checkTheme("system", "moon");
+      await themeToggle.press("Space");
+      await checkTheme("dark", "sun");
+      await themeToggle.press("Space");
+      await checkTheme("system", "moon");
       assert(await page.locator("#empty").isVisible());
       assert(await page.locator("#copy").isDisabled());
       const file = await imageFile(page);
@@ -478,6 +514,112 @@ try {
         .dispatchEvent("wheel", { deltaY: -100, ctrlKey: true });
       assert.equal(await page.locator("#zoom-value").textContent(), zoomText);
 
+      await page.locator("#actual-size").click();
+      const panStart = { x: workspace.x + 300, y: workspace.y + 200 };
+      const panRect = await values(page);
+      for (const mode of ["space", "middle", "button"]) {
+        await page.locator("#viewport").evaluate((node) => {
+          node.scrollLeft = 200;
+          node.scrollTop = 150;
+        });
+        if (mode === "button") await page.locator("#pan").click();
+        await page.locator("#viewport").focus();
+        await page.mouse.move(panStart.x, panStart.y);
+        if (mode === "space") await page.keyboard.down("Space");
+        const button = mode === "middle" ? "middle" : "left";
+        await page.mouse.down({ button });
+        await page.mouse.move(panStart.x - 80, panStart.y - 60, { steps: 4 });
+        await page.mouse.up({ button });
+        if (mode === "space") await page.keyboard.up("Space");
+        assert.deepEqual(
+          await page
+            .locator("#viewport")
+            .evaluate((node) => [node.scrollLeft, node.scrollTop]),
+          [280, 210],
+        );
+        assert.deepEqual(await values(page), panRect);
+        assert.equal(await page.locator("#zoom-value").textContent(), "100%");
+        if (mode === "button") await page.locator("#pan").click();
+      }
+      await page.locator("#viewport").focus();
+      await page.mouse.move(panStart.x, panStart.y);
+      await page.keyboard.down("Space");
+      await page.mouse.down();
+      await page.mouse.move(panStart.x - 30, panStart.y - 20);
+      await page.keyboard.press("Escape");
+      await page.mouse.up();
+      await page.keyboard.up("Space");
+      assert.deepEqual(
+        await page
+          .locator("#viewport")
+          .evaluate((node) => [node.scrollLeft, node.scrollTop]),
+        [280, 210],
+      );
+      assert.deepEqual(await values(page), panRect);
+      await page.locator("#template").press("End");
+      await page.locator("#template").press("Space");
+      assert((await page.locator("#template").inputValue()).endsWith(" "));
+      assert.equal(
+        await page
+          .locator("#viewport")
+          .evaluate((node) => node.classList.contains("pan-ready")),
+        false,
+      );
+      await page.locator("#template").fill("{width}x{height}+{x}+{y}");
+
+      // Zoomed edges extend offscreen; their handles must remain usable.
+      await setValues(page, [300, 100, 400, 1500]);
+      await page.locator("#viewport").evaluate((node) => {
+        node.scrollLeft = 200;
+        node.scrollTop = 300;
+      });
+      await page.waitForFunction(() => {
+        const handle = document.querySelector(".west")?.getBoundingClientRect();
+        const viewport = document.getElementById("viewport");
+        if (!handle || !viewport) return false;
+        const frame = viewport.getBoundingClientRect();
+        return (
+          Math.abs(
+            handle.top +
+              handle.height / 2 -
+              (frame.top + viewport.clientTop + viewport.clientHeight / 2),
+          ) < 1
+        );
+      });
+      assert(await page.locator(".north").isHidden());
+      assert(await page.locator(".south").isHidden());
+      const west = await page.locator(".west").boundingBox();
+      assert(west);
+      await page.mouse.move(west.x + west.width / 2, west.y + west.height / 2);
+      await page.mouse.down();
+      await page.mouse.move(
+        west.x + west.width / 2 + 40,
+        west.y + west.height / 2,
+      );
+      await page.mouse.up();
+      assert.deepEqual(await values(page), [340, 100, 360, 1500]);
+      await setValues(page, [100, 100, 2000, 200]);
+      await page.locator("#viewport").evaluate((node) => {
+        node.scrollLeft = 500;
+        node.scrollTop = 0;
+      });
+      await page.waitForFunction(() => {
+        const handle = document
+          .querySelector(".north")
+          ?.getBoundingClientRect();
+        const viewport = document.getElementById("viewport");
+        if (!handle || !viewport) return false;
+        const frame = viewport.getBoundingClientRect();
+        return (
+          Math.abs(
+            handle.left +
+              handle.width / 2 -
+              (frame.left + viewport.clientLeft + viewport.clientWidth / 2),
+          ) < 1
+        );
+      });
+      assert(await page.locator(".west").isHidden());
+      assert(await page.locator(".east").isHidden());
       await page.locator("#fit").click();
       await page.screenshot({
         path: `test-results/${name}-desktop.png`,
@@ -525,11 +667,43 @@ try {
         const after = await values(page);
         assert((after[0] ?? 0) > (before[0] ?? 0));
         assert((after[1] ?? 0) > (before[1] ?? 0));
+
+        await page.locator("#actual-size").tap();
+        await page.locator("#pan").tap();
+        await page.locator("#viewport").scrollIntoViewIfNeeded();
+        await page.locator("#viewport").evaluate((node) => {
+          node.scrollLeft = 100;
+          node.scrollTop = 60;
+        });
+        const touchFrame = await page.locator("#viewport").boundingBox();
+        assert(touchFrame);
+        const touch = { x: touchFrame.x + 140, y: touchFrame.y + 100 };
+        const beforePan = await values(page);
+        await session.send("Input.dispatchTouchEvent", {
+          type: "touchStart",
+          touchPoints: [touch],
+        });
+        await session.send("Input.dispatchTouchEvent", {
+          type: "touchMove",
+          touchPoints: [{ x: touch.x - 50, y: touch.y - 40 }],
+        });
+        await session.send("Input.dispatchTouchEvent", {
+          type: "touchEnd",
+          touchPoints: [],
+        });
+        assert.deepEqual(
+          await page
+            .locator("#viewport")
+            .evaluate((node) => [node.scrollLeft, node.scrollTop]),
+          [150, 100],
+        );
+        assert.deepEqual(await values(page), beforePan);
+        await page.locator("#pan").tap();
       }
       assert.deepEqual(errors, []);
       assert.deepEqual(external, []);
       console.log(
-        `PASS ${name}: image loading, selection, cancellation, keyboard, zoom, clipboard, responsive layout`,
+        `PASS ${name}: image loading, selection, cancellation, keyboard, zoom, pan, visible handles, theme, clipboard, responsive layout`,
       );
     } catch (error) {
       failed = true;

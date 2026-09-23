@@ -9,9 +9,11 @@ import {
   initialRect,
   type Point,
   type Rect,
+  visibleHandles,
 } from "./geometry";
 import { type LoadedImage, loadImage } from "./image";
 import { DEFAULT_TEMPLATE, formatRect } from "./output";
+import { initTheme } from "./theme";
 import "./index.css";
 
 function element<T extends HTMLElement>(id: string): T {
@@ -40,6 +42,12 @@ const inputs = Object.fromEntries(
 ) as Record<keyof Rect, HTMLInputElement>;
 const fitButton = element<HTMLButtonElement>("fit");
 const zoomValue = element<HTMLOutputElement>("zoom-value");
+const panButton = element<HTMLButtonElement>("pan");
+const handles = Array.from(
+  selection.querySelectorAll<HTMLButtonElement>(".handle"),
+);
+
+initTheme(element<HTMLButtonElement>("theme-toggle"));
 
 let image: LoadedImage | null = null;
 let rect: Rect | null = null;
@@ -47,12 +55,15 @@ let scale = 1;
 let fit = true;
 let loadRequest = 0;
 let loading = false;
+let panMode = false;
+let spacePressed = false;
 let drag: {
   pointerId: number;
-  handle: Handle | "draw";
+  handle: Handle | "draw" | "pan";
   rect: Rect;
   start: Point;
   client: Point;
+  scroll: Point;
   moved: boolean;
 } | null = null;
 
@@ -73,6 +84,7 @@ function renderRect(): void {
   zoomControls.disabled = !image || !!drag;
   clear.disabled = !image && !loading;
   copy.disabled = !rect;
+  renderPanState();
   output.value = formatRect(rect, template.value);
   if (!rect || !image) return;
   Object.assign(selection.style, {
@@ -91,6 +103,46 @@ function renderRect(): void {
   inputs.y.max = String(image.height - rect.height);
   inputs.width.max = String(image.width - rect.x);
   inputs.height.max = String(image.height - rect.y);
+  renderHandles();
+}
+
+function renderHandles(): void {
+  if (!image || !rect) return;
+  const box = selection.getBoundingClientRect();
+  const frame = viewport.getBoundingClientRect();
+  const x = Math.max(0, frame.left + viewport.clientLeft);
+  const y = Math.max(0, frame.top + viewport.clientTop);
+  const positions = visibleHandles(
+    { x: box.left, y: box.top, width: box.width, height: box.height },
+    {
+      x,
+      y,
+      width:
+        Math.min(
+          innerWidth,
+          frame.left + viewport.clientLeft + viewport.clientWidth,
+        ) - x,
+      height:
+        Math.min(
+          innerHeight,
+          frame.top + viewport.clientTop + viewport.clientHeight,
+        ) - y,
+    },
+  );
+  for (const button of handles) {
+    const point = positions[button.dataset.handle as Exclude<Handle, "move">];
+    button.hidden = !point;
+    if (point) {
+      button.style.left = `${point.x - box.left}px`;
+      button.style.top = `${point.y - box.top}px`;
+    }
+  }
+}
+
+function renderPanState(): void {
+  panButton.setAttribute("aria-pressed", String(panMode));
+  viewport.classList.toggle("pan-ready", !!image && (panMode || spacePressed));
+  viewport.classList.toggle("panning", drag?.handle === "pan");
 }
 
 function currentFit(): number {
@@ -117,6 +169,7 @@ function fitImage(): void {
   scale = currentFit();
   renderScale();
   viewport.scrollTo(0, 0);
+  renderHandles();
 }
 
 function zoom(next: number, anchor?: Point): void {
@@ -133,6 +186,7 @@ function zoom(next: number, anchor?: Point): void {
   const after = stage.getBoundingClientRect();
   viewport.scrollLeft += after.left + before.x * scale - client.x;
   viewport.scrollTop += after.top + before.y * scale - client.y;
+  renderHandles();
 }
 
 function pointOnImage(client: Point): Point {
@@ -265,27 +319,51 @@ function handleFrom(target: EventTarget | null): HTMLButtonElement | null {
     : null;
 }
 
-stage.addEventListener("pointerdown", (event) => {
-  if (!image || !rect || drag || !event.isPrimary || event.button !== 0) return;
+viewport.addEventListener("pointerdown", (event) => {
+  if (!image || !rect || drag || !event.isPrimary) return;
+  const panning =
+    event.button === 1 || (event.button === 0 && (panMode || spacePressed));
+  if (
+    !panning &&
+    (event.button !== 0 ||
+      !(event.target instanceof Node) ||
+      !stage.contains(event.target))
+  )
+    return;
+  const frame = viewport.getBoundingClientRect();
+  if (
+    event.clientX >= frame.left + viewport.clientLeft + viewport.clientWidth ||
+    event.clientY >= frame.top + viewport.clientTop + viewport.clientHeight
+  )
+    return;
   event.preventDefault();
   const button = handleFrom(event.target);
   const client = { x: event.clientX, y: event.clientY };
   drag = {
     pointerId: event.pointerId,
-    handle: (button?.dataset.handle as Handle | undefined) ?? "draw",
+    handle: panning
+      ? "pan"
+      : ((button?.dataset.handle as Handle | undefined) ?? "draw"),
     rect: { ...rect },
     start: pointOnImage(client),
     client,
+    scroll: { x: viewport.scrollLeft, y: viewport.scrollTop },
     moved: false,
   };
-  (button ?? viewport).focus({ preventScroll: true });
-  stage.setPointerCapture(event.pointerId);
+  (panning ? viewport : (button ?? viewport)).focus({ preventScroll: true });
+  viewport.setPointerCapture(event.pointerId);
   renderRect();
 });
 
 function updateDrag(event: PointerEvent): void {
   if (!drag || !image || event.pointerId !== drag.pointerId) return;
   const client = { x: event.clientX, y: event.clientY };
+  if (drag.handle === "pan") {
+    viewport.scrollLeft = drag.scroll.x - (client.x - drag.client.x);
+    viewport.scrollTop = drag.scroll.y - (client.y - drag.client.y);
+    renderHandles();
+    return;
+  }
   const current = pointOnImage(client);
   if (Math.hypot(client.x - drag.client.x, client.y - drag.client.y) >= 3)
     drag.moved = true;
@@ -311,31 +389,74 @@ function finishDrag(cancel: boolean): void {
   const previous = drag;
   drag = null;
   if (cancel) rect = previous.rect;
-  if (stage.hasPointerCapture(previous.pointerId))
-    stage.releasePointerCapture(previous.pointerId);
+  if (cancel && previous.handle === "pan")
+    viewport.scrollTo(previous.scroll.x, previous.scroll.y);
+  if (viewport.hasPointerCapture(previous.pointerId))
+    viewport.releasePointerCapture(previous.pointerId);
   renderRect();
-  if (fit) fitImage();
+  if (fit && previous.handle !== "pan") fitImage();
   if (cancel) status.textContent = "ドラッグを取り消しました。";
+  else if (previous.handle === "pan")
+    status.textContent = "表示位置を移動しました。";
   else announceRect();
 }
 
-stage.addEventListener("pointermove", updateDrag);
-stage.addEventListener("pointerup", (event) => {
+viewport.addEventListener("pointermove", updateDrag);
+viewport.addEventListener("pointerup", (event) => {
   if (event.pointerId !== drag?.pointerId) return;
   updateDrag(event);
   finishDrag(false);
 });
 for (const type of ["pointercancel", "lostpointercapture"]) {
-  stage.addEventListener(type, (event) => {
+  viewport.addEventListener(type, (event) => {
     if ((event as PointerEvent).pointerId === drag?.pointerId) finishDrag(true);
   });
 }
-window.addEventListener("blur", () => finishDrag(true));
+window.addEventListener("blur", () => {
+  spacePressed = false;
+  finishDrag(true);
+  renderPanState();
+});
 document.addEventListener("keydown", (event) => {
   if (event.key === "Escape" && drag) {
     event.preventDefault();
     finishDrag(true);
   }
+  if (
+    event.code === "Space" &&
+    image &&
+    !event.ctrlKey &&
+    !event.metaKey &&
+    !event.altKey
+  ) {
+    const target = event.target instanceof Element ? event.target : null;
+    if (
+      target?.closest("input, textarea, select, [contenteditable]") ||
+      (target?.closest("button") && !viewport.contains(target))
+    )
+      return;
+    if (
+      viewport.matches(":hover") ||
+      viewport.contains(document.activeElement)
+    ) {
+      event.preventDefault();
+      spacePressed = true;
+      renderPanState();
+    }
+  }
+});
+document.addEventListener("keyup", (event) => {
+  if (event.code === "Space") {
+    spacePressed = false;
+    renderPanState();
+  }
+});
+panButton.addEventListener("click", () => {
+  panMode = !panMode;
+  renderPanState();
+});
+viewport.addEventListener("auxclick", (event) => {
+  if (event.button === 1) event.preventDefault();
 });
 
 stage.addEventListener("keydown", (event) => {
@@ -423,7 +544,11 @@ viewport.addEventListener(
 
 new ResizeObserver(() => {
   if (fit && !drag) fitImage();
+  else renderHandles();
 }).observe(viewport);
+viewport.addEventListener("scroll", renderHandles, { passive: true });
+window.addEventListener("scroll", renderHandles, { passive: true });
+window.addEventListener("resize", renderHandles);
 
 window.addEventListener("pagehide", (event) => {
   if (!event.persisted) {

@@ -82,7 +82,7 @@
   }
   .page-header,
   .brand,
-  .file-panel,
+  .header-actions,
   .controls,
   .zoom-buttons,
   .copy-row,
@@ -101,6 +101,9 @@
     inline-size: 2.2rem;
     block-size: 2.2rem;
     flex: none;
+  }
+  .header-actions {
+    margin-inline-start: auto;
   }
   .eyebrow {
     font-size: 0.65rem;
@@ -122,18 +125,16 @@
     margin-inline-end: 0.5rem;
   }
   .file-panel {
-    flex-wrap: wrap;
-    padding: 1rem;
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto auto;
+    align-items: center;
+    gap: 0.5rem 0.75rem;
+    padding: 0.5rem 0.75rem;
     background: var(--panel);
     border: 1px solid var(--border);
     border-radius: 0.65rem;
   }
-  .file-control {
-    flex: 1 1 22rem;
-    min-inline-size: 0;
-  }
   .file-summary {
-    flex: 1 1 15rem;
     min-inline-size: 0;
     overflow-wrap: anywhere;
   }
@@ -219,8 +220,12 @@
       grid-template-columns: 1fr;
       gap: 0.75rem;
     }
-    .file-summary {
-      flex-basis: 100%;
+    .file-panel {
+      grid-template-columns: auto minmax(0, 1fr) auto;
+    }
+    #file-hint {
+      grid-column: 1 / -1;
+      grid-row: 2;
     }
     .coordinate-inputs {
       grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -233,6 +238,7 @@
     }
     .zoom-buttons {
       justify-content: space-between;
+      flex-wrap: wrap;
     }
     summary {
       text-align: start;
@@ -295,6 +301,19 @@
   [aria-pressed="true"] {
     border-color: var(--accent);
     color: var(--accent);
+  }
+  .icon-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: none;
+    inline-size: 2.5rem;
+    block-size: 2.5rem;
+    padding: 0.5rem;
+  }
+  .icon-button svg {
+    inline-size: 1.25rem;
+    block-size: 1.25rem;
   }
   #error {
     display: flex;
@@ -425,6 +444,19 @@
     left: 100%;
     top: 50%;
     cursor: e-resize;
+  }
+  #viewport.pan-ready {
+    touch-action: none;
+  }
+  #viewport.pan-ready,
+  #viewport.pan-ready #stage,
+  #viewport.pan-ready #selection button {
+    cursor: grab;
+  }
+  #viewport.panning,
+  #viewport.panning #stage,
+  #viewport.panning #selection button {
+    cursor: grabbing;
   }
   @media (forced-colors: active) {
     #selection {
