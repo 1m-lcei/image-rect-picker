@@ -1034,6 +1034,41 @@ try {
       await page.locator("#actual-size").tap();
       await page.locator("#fit").tap();
       await page.locator("#viewport").press("Enter");
+      // Touch hover must not make a disabled pan mode look enabled.
+      const pan = page.locator("#pan");
+      const panBackground = await pan.evaluate(
+        (node) => getComputedStyle(node).backgroundColor,
+      );
+      await pan.tap();
+      assert.equal(await pan.getAttribute("aria-pressed"), "true");
+      assert.notEqual(
+        await pan.evaluate((node) => getComputedStyle(node).backgroundColor),
+        panBackground,
+      );
+      await pan.tap();
+      assert.equal(await pan.getAttribute("aria-pressed"), "false");
+      assert.equal(
+        await page
+          .locator("#viewport")
+          .evaluate((node) => node.classList.contains("pan-ready")),
+        false,
+      );
+      assert.equal(
+        await pan.evaluate((node) => getComputedStyle(node).backgroundColor),
+        panBackground,
+      );
+      for (const width of [320, 390]) {
+        await page.setViewportSize({ width, height: 844 });
+        const actions = await page.locator(".header-actions").boundingBox();
+        const title = await page.locator("h1").boundingBox();
+        assert(actions && title && actions.y + actions.height <= title.y);
+        const icon = await page.locator("#copy svg").boundingBox();
+        // Check the rendered SVG content: the outer svg box alone misses this bug.
+        const drawing = await page.locator("#copy use").boundingBox();
+        assert(icon && drawing && drawing.width > 0 && drawing.height > 0);
+        assert(drawing.y >= icon.y - 1);
+        assert(drawing.y + drawing.height <= icon.y + icon.height + 1);
+      }
       await page.screenshot({
         path: `test-results/${name}-mobile-dark.png`,
         fullPage: true,

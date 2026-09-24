@@ -125,7 +125,7 @@
   .page-header {
     justify-content: space-between;
     margin-block-end: 0.25rem;
-    flex-wrap: wrap;
+    flex-wrap: wrap-reverse;
   }
   .brand-mark {
     inline-size: 2.2rem;
@@ -325,9 +325,11 @@
     white-space: nowrap;
     min-block-size: 2.5rem;
   }
-  button:not(:disabled):hover {
-    border-color: var(--accent);
-    color: var(--accent);
+  @media (hover: hover) {
+    button:not(:disabled, [aria-pressed="true"]):hover {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
   }
   button:disabled,
   input:disabled {
@@ -340,8 +342,10 @@
     color: light-dark(#fff, #101d35);
   }
   .primary:not(:disabled):hover {
-    background: light-dark(#16499f, #bbd1ff);
-    color: light-dark(#fff, #101d35);
+    @media (hover: hover) {
+      background: light-dark(#16499f, #bbd1ff);
+      color: light-dark(#fff, #101d35);
+    }
   }
   #coordinates input,
   .zoom-buttons > button,
@@ -361,7 +365,8 @@
   }
   [aria-pressed="true"] {
     border-color: var(--accent);
-    color: var(--accent);
+    background: var(--accent);
+    color: var(--panel);
   }
   .icon-button {
     display: inline-flex;
@@ -371,6 +376,15 @@
     inline-size: 2.5rem;
     block-size: 2.5rem;
     padding: 0.5rem;
+  }
+  .header-actions > .icon-button {
+    border-color: transparent;
+    background: transparent;
+    @media (hover: hover) {
+      &:hover {
+        background: var(--panel);
+      }
+    }
   }
   .icon-button svg,
   .inline-icon {
@@ -418,8 +432,8 @@
     anchor-name: --copy;
     position: absolute;
     inset-inline-end: 0.25rem;
-    inset-block-start: 50%;
-    translate: 0 -50%;
+    inset-block: 0;
+    margin-block: auto;
     inline-size: 1.75rem;
     block-size: 1.75rem;
     min-block-size: 1.75rem;
