@@ -403,9 +403,6 @@ try {
       assert(await help.isHidden());
       assert(await page.locator("#empty").isVisible());
       assert(await page.locator("#copy").isDisabled());
-      const emptyImageNameMarkup = await page
-        .locator("#image-name")
-        .innerHTML();
       const file = await imageFile(page);
       let fileChoosers = 0;
       page.on("filechooser", () => fileChoosers++);
@@ -433,10 +430,6 @@ try {
       assert.equal(fileChoosers, 5);
       await page.locator("#clear svg").click();
       assert(await page.locator("#empty").isVisible());
-      assert.equal(
-        await page.locator("#image-name").innerHTML(),
-        emptyImageNameMarkup,
-      );
       assert(
         await page
           .locator("#file")

@@ -23,8 +23,6 @@ function element<T extends HTMLElement>(id: string): T {
 }
 
 const fileInput = element<HTMLInputElement>("file");
-const imageName = element<HTMLParagraphElement>("image-name");
-const emptyImageName = [...imageName.childNodes];
 const viewport = element<HTMLElement>("viewport");
 const stage = element<HTMLDivElement>("stage");
 const imageElement = element<HTMLImageElement>("image");
@@ -257,7 +255,7 @@ async function openFiles(files: FileList): Promise<void> {
         imageElement.src = next.url;
         imageElement.alt = next.name;
         if (previous) URL.revokeObjectURL(previous.url);
-        imageName.textContent = next.name;
+        element("image-name").textContent = next.name;
         stage.hidden = false;
         fitImage();
         status.textContent =
@@ -302,7 +300,7 @@ clear.addEventListener("click", () => {
   imageElement.alt = "";
   stage.hidden = true;
   viewport.setAttribute("aria-busy", "false");
-  imageName.replaceChildren(...emptyImageName);
+  element("image-name").textContent = "画像を選択、または下の領域にドロップ";
   zoomValue.value = "—";
   fit = true;
   showError("");
