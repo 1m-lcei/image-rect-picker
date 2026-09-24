@@ -57,9 +57,9 @@
           <svg aria-hidden="true"><use href="/icons.svg#image-add" /></svg>
         </span>
         <div class="file-summary">
-          <p id="image-name">画像を選択、または下の領域にドロップ</p>
+          <p id="image-name"><span class="phrase">画像を選択、</span><wbr /><span class="phrase">または下の領域にドロップ</span></p>
         </div>
-        <p id="file-hint" class="hint">PNG・JPEG・WebP・GIF・BMP / 256 MiB・50メガピクセル以下</p>
+        <p id="file-hint" class="hint"><span class="phrase">PNG・JPEG・WebP・GIF・BMP / </span><wbr /><span class="phrase">256 MiB・50メガピクセル以下</span></p>
         <button id="clear" class="icon-button" type="button" aria-label="画像をクリア" title="画像をクリア" disabled>
           <svg aria-hidden="true"><use href="/icons.svg#trash" /></svg>
         </button>
@@ -118,8 +118,8 @@
       <section id="viewport" tabindex="0" aria-label="画像表示領域" aria-describedby="interaction-hint">
         <div id="empty">
           <svg aria-hidden="true"><use href="/icons.svg#image" /></svg>
-          <p>ここに画像をドロップするか、上の画像選択欄から選択してください。</p>
-          <p class="privacy-badge"><span>画像はアップロードされません（ローカルで処理）</span></p>
+          <p><span class="phrase">ここに画像をドロップするか、</span><wbr /><span class="phrase">上の画像選択欄から選択してください。</span></p>
+          <p class="privacy-badge"><span><span class="phrase">画像はアップロードされません</span><wbr /><span class="phrase">（ローカルで処理）</span></span></p>
         </div>
         <div id="stage" hidden>
           <img id="image" alt="" draggable="false" />

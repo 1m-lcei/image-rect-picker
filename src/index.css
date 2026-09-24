@@ -94,6 +94,11 @@
     line-height: 1.7;
     color: var(--muted);
   }
+  .phrase {
+    display: inline-block;
+    max-inline-size: 100%;
+    overflow-wrap: anywhere;
+  }
   .unit {
     font-size: 0.7rem;
     color: var(--muted);
