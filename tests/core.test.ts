@@ -13,8 +13,10 @@ import {
 } from "../src/geometry";
 import {
   ACCEPTED_TYPES,
+  loadImage,
   MAX_FILE_BYTES,
   MAX_IMAGE_PIXELS,
+  readImageSize,
   validateFile,
   validateSignature,
   validateSize,
@@ -147,6 +149,7 @@ test("テンプレートは6変数を置換し、未知変数や文字列を保�
 });
 
 test("画像の形式・容量・原寸の上限を検証する", () => {
+  expect(MAX_FILE_BYTES).toBe(256 * 1024 * 1024);
   for (const type of ACCEPTED_TYPES)
     expect(() => validateFile({ type, size: MAX_FILE_BYTES })).not.toThrow();
   for (const type of ["image/svg+xml", "", "text/plain"])
@@ -164,6 +167,92 @@ test("画像の形式・容量・原寸の上限を検証する", () => {
     { width: 1.5, height: 1 },
   ]) {
     expect(() => validateSize(bounds)).toThrow();
+  }
+});
+
+test("各形式のヘッダーを読み、50MP超はデコーダーを呼ぶ前に拒否する", async () => {
+  // Header-only fixtures intentionally cannot be decoded as complete images.
+  for (const height of [5000, 5001]) {
+    const width = 10000;
+    const png = Buffer.alloc(24);
+    png.set([137, 80, 78, 71, 13, 10, 26, 10]);
+    png.writeUInt32BE(13, 8);
+    png.write("IHDR", 12);
+    png.writeUInt32BE(width, 16);
+    png.writeUInt32BE(height, 20);
+    const gif = Buffer.alloc(13);
+    gif.write("GIF89a");
+    gif.writeUInt16LE(width, 6);
+    gif.writeUInt16LE(height, 8);
+    const bmp = Buffer.alloc(54);
+    bmp.write("BM");
+    bmp.writeUInt32LE(40, 14);
+    bmp.writeInt32LE(width, 18);
+    bmp.writeInt32LE(-height, 22); // Top-down bitmap.
+    const coreBmp = Buffer.from(bmp);
+    coreBmp.writeUInt32LE(12, 14);
+    coreBmp.writeUInt16LE(width, 18);
+    coreBmp.writeUInt16LE(height, 20);
+    const frame = Buffer.from([0xff, 0xc2, 0, 8, 8, 0, 0, 0, 0, 1]);
+    frame.writeUInt16BE(height, 5);
+    frame.writeUInt16BE(width, 7);
+    const app = Buffer.alloc(65537);
+    app.set([0xff, 0xe1, 0xff, 0xff]);
+    const jpeg = Buffer.concat([
+      Buffer.from([0xff, 0xd8]),
+      app,
+      app,
+      Buffer.from([0xff]),
+      frame,
+    ]);
+    const webp = (kind: string, payload: Buffer) => {
+      const header = Buffer.alloc(20);
+      header.write("RIFF");
+      header.writeUInt32LE(12 + payload.length, 4);
+      header.write("WEBP", 8);
+      header.write(kind, 12);
+      header.writeUInt32LE(payload.length, 16);
+      return Buffer.concat([header, payload]);
+    };
+    const extended = Buffer.alloc(10);
+    extended[0] = 2; // Animation flag: use the full canvas dimensions.
+    extended.writeUIntLE(width - 1, 4, 3);
+    extended.writeUIntLE(height - 1, 7, 3);
+    const lossy = Buffer.alloc(10);
+    lossy.set([0x9d, 0x01, 0x2a], 3);
+    lossy.writeUInt16LE(width, 6);
+    lossy.writeUInt16LE(height, 8);
+    const lossless = Buffer.alloc(5);
+    lossless[0] = 0x2f;
+    lossless.writeUInt32LE((width - 1) | ((height - 1) << 14), 1);
+    for (const [type, bytes] of [
+      ["image/png", png],
+      ["image/gif", gif],
+      ["image/bmp", bmp],
+      ["image/bmp", coreBmp],
+      ["image/jpeg", jpeg],
+      ["image/webp", webp("VP8X", extended)],
+      ["image/webp", webp("VP8 ", lossy)],
+      ["image/webp", webp("VP8L", lossless)],
+    ] as const) {
+      const file = new File([bytes], "header", { type });
+      expect(await readImageSize(file)).toEqual({ width, height });
+      if (height === 5001)
+        await expect(loadImage(file)).rejects.toThrow("50メガピクセル");
+      else expect(() => validateSize({ width, height })).not.toThrow();
+      await expect(
+        readImageSize(new File([bytes.subarray(0, 10)], "truncated", { type })),
+      ).rejects.toThrow();
+    }
+    // Invalid JPEG segment lengths must fail rather than looping or scanning pixel data.
+    for (const length of [0, 1, 65535]) {
+      const broken = Buffer.alloc(12);
+      broken.set([0xff, 0xd8, 0xff, 0xe1]);
+      broken.writeUInt16BE(length, 4);
+      await expect(
+        readImageSize(new File([broken], "broken.jpg", { type: "image/jpeg" })),
+      ).rejects.toThrow();
+    }
   }
 });
 

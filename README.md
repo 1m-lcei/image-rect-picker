@@ -44,4 +44,4 @@ Coordinates are whole pixels measured from the image's top-left corner. You can 
 
 ## Supported images
 
-PNG, JPEG, WebP, GIF, and BMP, up to **20 MiB** and **50 megapixels**. One image and one selection at a time. SVG is not supported.
+PNG, JPEG, WebP, GIF, and BMP, up to **256 MiB** and **50 megapixels**. Dimensions are checked before decoding. Images load one at a time; selecting another image while loading replaces the waiting image. One image and one selection at a time. SVG is not supported.

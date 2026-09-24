@@ -75,6 +75,8 @@ let scale = 1;
 let fit = true;
 let loadRequest = 0;
 let loading = false;
+let pendingFile: File | null = null;
+let readingImage = false;
 let panMode = false;
 let spacePressed = false;
 let drag: {
@@ -216,7 +218,8 @@ function pointOnImage(client: Point): Point {
 
 async function openFiles(files: FileList): Promise<void> {
   if (files.length === 0) return;
-  const request = ++loadRequest;
+  ++loadRequest;
+  pendingFile = null;
   finishDrag(true);
   showError("");
   loading = false;
@@ -231,38 +234,52 @@ async function openFiles(files: FileList): Promise<void> {
   viewport.setAttribute("aria-busy", "true");
   status.textContent = "画像を読み込んでいます…";
   renderRect();
+  pendingFile = files[0];
+  if (readingImage) return;
+  readingImage = true;
   try {
-    const next = await loadImage(files[0]);
-    if (request !== loadRequest) {
-      URL.revokeObjectURL(next.url);
-      return;
+    while (pendingFile) {
+      const file = pendingFile;
+      const request = loadRequest;
+      pendingFile = null;
+      try {
+        const next = await loadImage(file);
+        if (request !== loadRequest) {
+          URL.revokeObjectURL(next.url);
+          continue;
+        }
+        finishDrag(true);
+        const previous = image;
+        image = next;
+        rect = null;
+        imageElement.src = next.url;
+        imageElement.alt = next.name;
+        if (previous) URL.revokeObjectURL(previous.url);
+        element("image-name").textContent = next.name;
+        stage.hidden = false;
+        fitImage();
+        status.textContent =
+          "画像を開きました。ドラッグで範囲を選択してください。画像表示領域にフォーカス + Enterでも選択を開始できます。";
+      } catch (error) {
+        if (request !== loadRequest) continue;
+        showError(
+          error instanceof Error
+            ? error.message
+            : "画像の読み込みに失敗しました。",
+        );
+        status.textContent = image
+          ? "現在の画像と選択範囲を保持しています。"
+          : "別の画像を選択してください。";
+      } finally {
+        if (request === loadRequest) {
+          loading = false;
+          viewport.setAttribute("aria-busy", "false");
+          renderRect();
+        }
+      }
     }
-    finishDrag(true);
-    const previous = image;
-    image = next;
-    rect = null;
-    imageElement.src = next.url;
-    imageElement.alt = next.name;
-    if (previous) URL.revokeObjectURL(previous.url);
-    element("image-name").textContent = next.name;
-    stage.hidden = false;
-    fitImage();
-    status.textContent =
-      "画像を開きました。ドラッグで範囲を選択してください。画像表示領域にフォーカス + Enterでも選択を開始できます。";
-  } catch (error) {
-    if (request !== loadRequest) return;
-    showError(
-      error instanceof Error ? error.message : "画像の読み込みに失敗しました。",
-    );
-    status.textContent = image
-      ? "現在の画像と選択範囲を保持しています。"
-      : "別の画像を選択してください。";
   } finally {
-    if (request === loadRequest) {
-      loading = false;
-      viewport.setAttribute("aria-busy", "false");
-      renderRect();
-    }
+    readingImage = false;
   }
 }
 
@@ -273,6 +290,7 @@ fileInput.addEventListener("change", () => {
 
 clear.addEventListener("click", () => {
   ++loadRequest;
+  pendingFile = null;
   loading = false;
   finishDrag(true);
   if (image) URL.revokeObjectURL(image.url);
@@ -589,6 +607,7 @@ window.addEventListener("resize", renderHandles);
 window.addEventListener("pagehide", (event) => {
   if (!event.persisted) {
     ++loadRequest;
+    pendingFile = null;
     if (image) URL.revokeObjectURL(image.url);
   }
 });

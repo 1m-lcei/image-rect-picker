@@ -136,6 +136,12 @@ try {
         active.delete(url);
         document.documentElement.dataset.objectUrls = String(active.size);
       };
+      const decode = HTMLImageElement.prototype.decode;
+      let decodes = 0;
+      HTMLImageElement.prototype.decode = function () {
+        document.documentElement.dataset.decodes = String(++decodes);
+        return decode.call(this);
+      };
     });
     page.setDefaultTimeout(10000);
     const errors: string[] = [];
@@ -687,11 +693,6 @@ try {
             '<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10"/>',
           ),
         },
-        {
-          name: "oversize.png",
-          mimeType: "image/png",
-          buffer: Buffer.alloc(20 * 1024 * 1024 + 1),
-        },
       ]) {
         await page.locator("#file").setInputFiles(invalid);
         await loaded(page);
@@ -703,11 +704,21 @@ try {
         );
       }
 
-      if (name === "chromium") {
-        await page
-          .locator("#file")
-          .setInputFiles(await imageFile(page, 10000, 5001));
+      {
+        const oversized = Buffer.from(file.buffer.subarray(0, 33));
+        oversized.writeUInt32BE(10000, 16);
+        oversized.writeUInt32BE(5001, 20);
+        const decodes = await page.locator("html").getAttribute("data-decodes");
+        await page.locator("#file").setInputFiles({
+          name: "oversized.png",
+          mimeType: "image/png",
+          buffer: oversized,
+        });
         await loaded(page);
+        assert.equal(
+          await page.locator("html").getAttribute("data-decodes"),
+          decodes,
+        );
         assert.match(
           await page.locator("#error-text").innerText(),
           /50メガピクセル/,
@@ -729,7 +740,13 @@ try {
       bmp.writeInt32LE(1, 22);
       bmp.writeUInt16LE(1, 26);
       bmp.writeUInt16LE(24, 28);
+      const largeBmp = Buffer.alloc(54 + 4000 * 2000 * 3);
+      bmp.copy(largeBmp);
+      largeBmp.writeUInt32LE(largeBmp.length, 2);
+      largeBmp.writeInt32LE(4000, 18);
+      largeBmp.writeInt32LE(2000, 22);
       for (const supported of [
+        { name: "over-20MiB.bmp", mimeType: "image/bmp", buffer: largeBmp },
         await imageFile(page, 32, 24, "image/jpeg"),
         await imageFile(page, 32, 24, "image/webp"),
         {
@@ -788,16 +805,20 @@ try {
       await drop(1);
       assert.equal(await page.locator("#image-name").textContent(), "drop.png");
 
-      // Hold decodes to deterministically reverse the order of two loads.
+      // Hold a decode: only the latest waiting file may start after it finishes.
       await page.evaluate(() => {
         const decode = HTMLImageElement.prototype.decode;
         HTMLImageElement.prototype.decode = function () {
-          const ready = decode.call(this);
+          const ready = decode.call(this).then(
+            () => null,
+            (error: unknown) => error,
+          );
           return new Promise<void>((resolve, reject) => {
             const release = document.createElement("button");
             release.className = "release-decode";
+            release.dataset.src = this.src;
             release.onclick = () => {
-              ready.then(resolve, reject);
+              void ready.then((error) => (error ? reject(error) : resolve()));
               release.remove();
             };
             document.body.append(release);
@@ -806,27 +827,86 @@ try {
       });
       await page.locator("#file").setInputFiles({ ...file, name: "old.png" });
       await page.locator(".release-decode").waitFor({ state: "attached" });
+      const oldSource = await page
+        .locator(".release-decode")
+        .getAttribute("data-src");
+      const beforeQueued = Number(
+        await page.locator("html").getAttribute("data-decodes"),
+      );
+      await page
+        .locator("#file")
+        .setInputFiles({ ...file, name: "skipped.png" });
       await page.locator("#file").setInputFiles({ ...file, name: "new.png" });
+      assert.equal(await page.locator(".release-decode").count(), 1);
+      assert.equal(
+        Number(await page.locator("html").getAttribute("data-decodes")),
+        beforeQueued,
+      );
       await page
         .locator(".release-decode")
-        .nth(1)
-        .waitFor({ state: "attached" });
+        .evaluate((node) => (node as HTMLButtonElement).click());
+      await page.waitForFunction((oldSource) => {
+        const release =
+          document.querySelector<HTMLButtonElement>(".release-decode");
+        return release && release.dataset.src !== oldSource;
+      }, oldSource);
+      assert.equal(
+        Number(await page.locator("html").getAttribute("data-decodes")),
+        beforeQueued + 1,
+      );
       await page
         .locator(".release-decode")
-        .nth(1)
         .evaluate((node) => (node as HTMLButtonElement).click());
       await loaded(page);
-      await page
-        .locator(".release-decode")
-        .evaluate((node) => (node as HTMLButtonElement).click());
       await page.waitForFunction(
         () => document.documentElement.dataset.objectUrls === "1",
       );
       assert.equal(await page.locator("#image-name").textContent(), "new.png");
+      // A failed active decode must still release the next waiting image.
+      await page.locator("#file").setInputFiles({
+        ...file,
+        name: "broken-pixels.png",
+        buffer: file.buffer.subarray(0, 33),
+      });
+      await page.locator(".release-decode").waitFor({ state: "attached" });
+      const failedSource = await page
+        .locator(".release-decode")
+        .getAttribute("data-src");
+      await page
+        .locator("#file")
+        .setInputFiles({ ...file, name: "recovered.png" });
+      assert.equal(await page.locator("#image-name").textContent(), "new.png");
+      await page
+        .locator(".release-decode")
+        .evaluate((node) => (node as HTMLButtonElement).click());
+      await page.waitForFunction((source) => {
+        const release =
+          document.querySelector<HTMLButtonElement>(".release-decode");
+        return release && release.dataset.src !== source;
+      }, failedSource);
+      await page
+        .locator(".release-decode")
+        .evaluate((node) => (node as HTMLButtonElement).click());
+      await loaded(page);
+      assert.equal(
+        await page.locator("#image-name").textContent(),
+        "recovered.png",
+      );
+      assert(await page.locator("#error").isHidden());
+      assert.equal(
+        await page.locator("html").getAttribute("data-object-urls"),
+        "1",
+      );
       await page
         .locator("#file")
         .setInputFiles({ ...file, name: "cancelled.png" });
       await page.locator(".release-decode").waitFor({ state: "attached" });
+      await page
+        .locator("#file")
+        .setInputFiles({ ...file, name: "cancelled-pending.png" });
+      const beforeClear = await page
+        .locator("html")
+        .getAttribute("data-decodes");
       await page.locator("#clear").click();
       await page
         .locator(".release-decode")
@@ -835,6 +915,10 @@ try {
         () => document.documentElement.dataset.objectUrls === "0",
       );
       assert(await page.locator("#empty").isVisible());
+      assert.equal(
+        await page.locator("html").getAttribute("data-decodes"),
+        beforeClear,
+      );
       assert.equal(
         await page.locator("#template").inputValue(),
         "{x},{y},{width},{height},{x2},{y2},{x},<b>{unknown}</b>",
