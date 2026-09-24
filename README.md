@@ -5,12 +5,12 @@
 
   <p><strong>Precise image regions. Coordinates in your format.</strong></p>
   
-  <p>Your images stay in your browser. Images are never uploaded or saved.</p>
+  <p>Images are never uploaded or saved.</p>
 </div>
 
 <hr>
 
-Select a rectangular region in an image and copy its coordinates in your preferred format. Useful for sprite regions, image-processing commands, and other tasks that need precise pixel coordinates.
+Select a rectangular region in an image and copy its coordinates using your preferred text template. Useful for sprite regions, image-processing commands, and other tasks that need precise pixel coordinates.
 
 ## Features
 
@@ -20,9 +20,7 @@ Select a rectangular region in an image and copy its coordinates in your preferr
 - Enter coordinates directly, or use arrow keys for 1-pixel adjustments and `Shift` + `arrow` keys for 10 pixels.
 - Zoom around the cursor, fit the whole image, or view it at 100%. Coordinates always refer to the original image.
 - Pan with `Space` + drag, the middle mouse button, or the Pan mode button. Resize handles stay centered on each visible edge.
-- Toggle light and dark with the top-right button, or choose System, Light, or Dark from the menu.
 - Customize the output template and copy the result.
-- Theme and output template are remembered in this browser. Images and selections reset on reload.
 
 ## Output format
 
@@ -44,4 +42,4 @@ Coordinates are whole pixels measured from the image's top-left corner. You can 
 
 ## Supported images
 
-PNG, JPEG, WebP, GIF, and BMP, up to **256 MiB** and **50 megapixels**. Dimensions are checked before decoding. Images load one at a time; selecting another image while loading replaces the waiting image. One image and one selection at a time. SVG is not supported.
+PNG, JPEG, WebP, GIF, and BMP, up to **256 MiB** and **50 megapixels**. One image and one selection at a time. SVG is not supported.
