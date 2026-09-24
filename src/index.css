@@ -144,12 +144,6 @@
     margin-inline-start: auto;
     gap: 0.5rem;
   }
-  .eyebrow {
-    font-size: 0.65rem;
-    letter-spacing: 0.18em;
-    color: var(--muted);
-    margin-block-end: 0.2rem;
-  }
   .privacy-badge {
     display: inline-flex;
     align-items: center;

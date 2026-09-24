@@ -7,10 +7,9 @@ await mkdir("test-results", { recursive: true });
 const server = await preview({
   preview: { host: "127.0.0.1", port: 0, open: false },
 });
-const address = server.httpServer.address();
-assert(address && typeof address !== "string");
-const origin = `http://127.0.0.1:${address.port}`;
-const engines = process.argv.includes("--edge")
+const useEdge = process.argv.includes("--edge");
+const screenshots = process.argv.includes("--screenshots");
+const engines = useEdge
   ? ([["edge", chromium]] as const)
   : ([
       ["chromium", chromium],
@@ -105,53 +104,58 @@ async function dragImage(
 
 let failed = false;
 try {
+  const address = server.httpServer.address();
+  assert(address && typeof address !== "string");
+  const origin = `http://127.0.0.1:${address.port}`;
   for (const [name, engine] of engines) {
     const browser = await engine
-      .launch(name === "edge" ? { channel: "msedge" } : {})
+      .launch(useEdge ? { channel: "msedge" } : {})
       .catch((error: unknown) => {
         failed = true;
         console.error(`FAIL ${name}: browser could not start`, error);
         return null;
       });
     if (!browser) continue;
-    const context = await browser.newContext({
-      viewport: { width: 1440, height: 1000 },
-      colorScheme: "light",
-      locale: "ja-JP",
-      hasTouch: true,
-    });
-    const page = await context.newPage();
-    await page.addInitScript(() => {
-      const active = new Set<string>();
-      const create = URL.createObjectURL.bind(URL);
-      const revoke = URL.revokeObjectURL.bind(URL);
-      URL.createObjectURL = (blob) => {
-        const url = create(blob);
-        active.add(url);
-        document.documentElement.dataset.objectUrls = String(active.size);
-        return url;
-      };
-      URL.revokeObjectURL = (url) => {
-        revoke(url);
-        active.delete(url);
-        document.documentElement.dataset.objectUrls = String(active.size);
-      };
-      const decode = HTMLImageElement.prototype.decode;
-      let decodes = 0;
-      HTMLImageElement.prototype.decode = function () {
-        document.documentElement.dataset.decodes = String(++decodes);
-        return decode.call(this);
-      };
-    });
-    page.setDefaultTimeout(10000);
-    const errors: string[] = [];
-    const external: string[] = [];
-    page.on("pageerror", (error) => errors.push(error.message));
-    page.on("request", (request) => {
-      if (/^https?:/.test(request.url()) && !request.url().startsWith(origin))
-        external.push(request.url());
-    });
+    let failurePage: Page | undefined;
     try {
+      const context = await browser.newContext({
+        viewport: { width: 1440, height: 1000 },
+        colorScheme: "light",
+        locale: "ja-JP",
+        hasTouch: true,
+      });
+      const page = await context.newPage();
+      failurePage = page;
+      await page.addInitScript(() => {
+        const active = new Set<string>();
+        const create = URL.createObjectURL.bind(URL);
+        const revoke = URL.revokeObjectURL.bind(URL);
+        URL.createObjectURL = (blob) => {
+          const url = create(blob);
+          active.add(url);
+          document.documentElement.dataset.objectUrls = String(active.size);
+          return url;
+        };
+        URL.revokeObjectURL = (url) => {
+          revoke(url);
+          active.delete(url);
+          document.documentElement.dataset.objectUrls = String(active.size);
+        };
+        const decode = HTMLImageElement.prototype.decode;
+        let decodes = 0;
+        HTMLImageElement.prototype.decode = function () {
+          document.documentElement.dataset.decodes = String(++decodes);
+          return decode.call(this);
+        };
+      });
+      page.setDefaultTimeout(10000);
+      const errors: string[] = [];
+      const external: string[] = [];
+      page.on("pageerror", (error) => errors.push(error.message));
+      page.on("request", (request) => {
+        if (/^https?:/.test(request.url()) && !request.url().startsWith(origin))
+          external.push(request.url());
+      });
       // Native controls and CSS remain usable without script or anchor support.
       const nativePage = await browser.newPage({
         javaScriptEnabled: false,
@@ -379,7 +383,8 @@ try {
           ...document.querySelectorAll<SVGUseElement>(".about-links svg use"),
         ].every((node) => node.getBBox().width > 0),
       );
-      await page.screenshot({ path: `test-results/${name}-about.png` });
+      if (screenshots)
+        await page.screenshot({ path: `test-results/${name}-about.png` });
       await page.keyboard.press("Escape");
       assert(await about.isHidden());
       await page.waitForFunction(
@@ -531,9 +536,31 @@ try {
         assert(box);
         await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
         await page.mouse.down();
-        await page.mouse.move(
-          box.x + box.width / 2 + 30,
-          box.y + box.height / 2 + 15,
+        const client = {
+          clientX: Math.round(box.x + box.width / 2 + 30),
+          clientY: Math.round(box.y + box.height / 2 + 15),
+        };
+        await page.mouse.move(client.clientX, client.clientY);
+        assert.equal(
+          await page.locator("#viewport").evaluate((node, client) => {
+            const selection = document.getElementById("selection");
+            if (!selection) throw new Error("Missing selection");
+            const observer = new MutationObserver(() => {});
+            observer.observe(selection, { attributes: true, subtree: true });
+            const pointerId = Number(
+              document.getElementById("stage")?.dataset.pointer,
+            );
+            for (let i = 0; i < 3; i++) {
+              node.dispatchEvent(
+                new PointerEvent("pointermove", { ...client, pointerId }),
+              );
+            }
+            const changes = observer.takeRecords().length;
+            observer.disconnect();
+            return changes;
+          }, client),
+          0,
+          "An unchanged rectangle does not rewrite the selection or handles",
         );
         if (cancel === "Escape") await page.keyboard.press("Escape");
         else
@@ -616,29 +643,40 @@ try {
                 : Number(value) > 200,
             ),
         );
-        await page.screenshot({
-          path: `test-results/${name}-copy-${preference}.png`,
-        });
+        if (screenshots)
+          await page.screenshot({
+            path: `test-results/${name}-copy-${preference}.png`,
+          });
       }
-      await page.waitForTimeout(1200);
       await page.locator("#copy").click();
-      await page.waitForTimeout(1200);
-      assert(
-        await copyFeedback.isVisible(),
-        "Repeated copy restarts the timer",
-      );
-      await page.waitForFunction(() => {
-        const feedback = document.getElementById("copy-feedback");
-        if (!feedback || feedback.hidden) return false;
-        const opacity = Number(getComputedStyle(feedback).opacity);
-        return opacity > 0 && opacity < 1;
+      for (const time of [1200, 1700]) {
+        const opacity = await copyFeedback.evaluate((node, time) => {
+          const animation = node.getAnimations()[0];
+          if (!animation) throw new Error("Missing copy feedback animation");
+          animation.pause();
+          animation.currentTime = time;
+          return Number(getComputedStyle(node).opacity);
+        }, time);
+        assert(time === 1200 ? opacity === 1 : opacity > 0 && opacity < 1);
+        await page.locator("#copy").click();
+        assert(
+          await copyFeedback.evaluate((node) =>
+            node
+              .getAnimations()
+              .some((animation) => Number(animation.currentTime) < 1200),
+          ),
+          "Repeated copy restarts the animation",
+        );
+        assert.equal(
+          await copyFeedback.evaluate((node) => getComputedStyle(node).opacity),
+          "1",
+          "Repeated copy restores full opacity",
+        );
+      }
+      // Keep one real-time completion check, including animationend cleanup.
+      await copyFeedback.evaluate((node) => {
+        for (const animation of node.getAnimations()) animation.play();
       });
-      await page.locator("#copy").click();
-      assert.equal(
-        await copyFeedback.evaluate((node) => getComputedStyle(node).opacity),
-        "1",
-        "Copying during fade-out restores full opacity",
-      );
       await copyFeedback.waitFor({ state: "hidden" });
       await page.emulateMedia({ reducedMotion: "reduce" });
       await page.locator("#copy").click();
@@ -1099,10 +1137,11 @@ try {
       assert(await page.locator(".west").isHidden());
       assert(await page.locator(".east").isHidden());
       await page.locator("#fit").click();
-      await page.screenshot({
-        path: `test-results/${name}-desktop.png`,
-        fullPage: true,
-      });
+      if (screenshots)
+        await page.screenshot({
+          path: `test-results/${name}-desktop.png`,
+          fullPage: true,
+        });
       await page.emulateMedia({ colorScheme: "dark" });
       await page.setViewportSize({ width: 390, height: 844 });
       await page.locator("#file").setInputFiles({
@@ -1153,14 +1192,16 @@ try {
         assert(drawing.y >= icon.y - 1);
         assert(drawing.y + drawing.height <= icon.y + icon.height + 1);
       }
-      await page.screenshot({
-        path: `test-results/${name}-mobile-dark.png`,
-        fullPage: true,
-      });
+      if (screenshots)
+        await page.screenshot({
+          path: `test-results/${name}-mobile-dark.png`,
+          fullPage: true,
+        });
       await menuTrigger.tap();
       const menuBox = await menu.boundingBox();
       assert(menuBox && menuBox.x >= 0 && menuBox.x + menuBox.width <= 390);
-      await page.screenshot({ path: `test-results/${name}-mobile-menu.png` });
+      if (screenshots)
+        await page.screenshot({ path: `test-results/${name}-mobile-menu.png` });
       await page.locator("#about-trigger").tap();
       await page.touchscreen.tap(1, 1);
       assert(await about.isHidden());
@@ -1171,7 +1212,8 @@ try {
           mobileHelpBox.x >= 0 &&
           mobileHelpBox.x + mobileHelpBox.width <= 390,
       );
-      await page.screenshot({ path: `test-results/${name}-mobile-help.png` });
+      if (screenshots)
+        await page.screenshot({ path: `test-results/${name}-mobile-help.png` });
       await page.touchscreen.tap(1, 1);
       assert(await help.isHidden());
 
@@ -1238,8 +1280,8 @@ try {
       );
     } catch (error) {
       failed = true;
-      await page
-        .screenshot({
+      await failurePage
+        ?.screenshot({
           path: `test-results/${name}-failure.png`,
           fullPage: true,
         })
@@ -1254,59 +1296,64 @@ try {
     base: "/nested/",
     preview: { host: "127.0.0.1", port: 0, open: false },
   });
-  const nestedAddress = nested.httpServer.address();
-  assert(nestedAddress && typeof nestedAddress !== "string");
-  const browser = await chromium.launch();
   try {
-    const page = await browser.newPage();
-    await page.goto(`http://127.0.0.1:${nestedAddress.port}/nested/`);
-    await page.locator("#menu-trigger").click();
-    await page.locator("#about-trigger").click();
-    // External SVG references must render beneath a deployment subdirectory.
-    await page.waitForFunction(() =>
-      [...document.querySelectorAll<SVGUseElement>("svg use")]
-        .filter((node) => node.ownerSVGElement?.getBoundingClientRect().width)
-        .every((node) => node.getBBox().width > 0),
-    );
-    await page.keyboard.press("Escape");
-    await page.locator("#file").setInputFiles(await imageFile(page, 1, 1));
-    await loaded(page);
-    assert(await page.locator("#selection").isHidden());
-    await page.locator("#viewport").press("Enter");
-    assert.equal(await page.locator("#output").inputValue(), "1x1+0+0");
-    console.log("PASS subdirectory deployment");
-
-    // CSS must size icons before the development entry script can run.
-    const dev = await createServer({
-      server: { host: "127.0.0.1", port: 0, open: false },
-    });
+    const nestedAddress = nested.httpServer.address();
+    assert(nestedAddress && typeof nestedAddress !== "string");
+    const browser = await chromium.launch(useEdge ? { channel: "msedge" } : {});
     try {
-      await dev.listen();
-      const devAddress = dev.httpServer?.address();
-      assert(devAddress && typeof devAddress !== "string");
-      const initial = await browser.newPage({ javaScriptEnabled: false });
-      await initial.goto(`http://127.0.0.1:${devAddress.port}`);
-      for (const selector of ["#help-trigger svg", "#empty svg"]) {
-        await initial.waitForFunction((selector) => {
-          const use = document.querySelector<SVGUseElement>(`${selector} use`);
-          return use && use.getBBox().width > 0;
-        }, selector);
-        const box = await initial.locator(selector).boundingBox();
-        assert(
-          box &&
-            box.width > 0 &&
-            box.width <= 64 &&
-            box.height > 0 &&
-            box.height <= 64,
-        );
+      const page = await browser.newPage();
+      await page.goto(`http://127.0.0.1:${nestedAddress.port}/nested/`);
+      await page.locator("#menu-trigger").click();
+      await page.locator("#about-trigger").click();
+      // External SVG references must render beneath a deployment subdirectory.
+      await page.waitForFunction(() =>
+        [...document.querySelectorAll<SVGUseElement>("svg use")]
+          .filter((node) => node.ownerSVGElement?.getBoundingClientRect().width)
+          .every((node) => node.getBBox().width > 0),
+      );
+      await page.keyboard.press("Escape");
+      await page.locator("#file").setInputFiles(await imageFile(page, 1, 1));
+      await loaded(page);
+      assert(await page.locator("#selection").isHidden());
+      await page.locator("#viewport").press("Enter");
+      assert.equal(await page.locator("#output").inputValue(), "1x1+0+0");
+      console.log("PASS subdirectory deployment");
+
+      // CSS must size icons before the development entry script can run.
+      const dev = await createServer({
+        server: { host: "127.0.0.1", port: 0, open: false },
+      });
+      try {
+        await dev.listen();
+        const devAddress = dev.httpServer?.address();
+        assert(devAddress && typeof devAddress !== "string");
+        const initial = await browser.newPage({ javaScriptEnabled: false });
+        await initial.goto(`http://127.0.0.1:${devAddress.port}`);
+        for (const selector of ["#help-trigger svg", "#empty svg"]) {
+          await initial.waitForFunction((selector) => {
+            const use = document.querySelector<SVGUseElement>(
+              `${selector} use`,
+            );
+            return use && use.getBBox().width > 0;
+          }, selector);
+          const box = await initial.locator(selector).boundingBox();
+          assert(
+            box &&
+              box.width > 0 &&
+              box.width <= 64 &&
+              box.height > 0 &&
+              box.height <= 64,
+          );
+        }
+        await initial.close();
+        console.log("PASS initial icon sizing without JavaScript");
+      } finally {
+        await dev.close();
       }
-      await initial.close();
-      console.log("PASS initial icon sizing without JavaScript");
     } finally {
-      await dev.close();
+      await browser.close();
     }
   } finally {
-    await browser.close();
     await new Promise<void>((resolve) =>
       nested.httpServer.close(() => resolve()),
     );

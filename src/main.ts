@@ -101,7 +101,8 @@ function announceRect(): void {
     status.textContent = `選択範囲: X ${rect.x}、Y ${rect.y}、幅 ${rect.width}、高さ ${rect.height} px。`;
 }
 
-function renderRect(): void {
+function renderRect(updateHandles = true): void {
+  if (updateHandles) renderHandles();
   coordinates.disabled = !rect || !!drag;
   zoomControls.disabled = !image || !!drag;
   clear.disabled = !image && !loading;
@@ -126,38 +127,41 @@ function renderRect(): void {
   inputs.y.max = String(image.height - rect.height);
   inputs.width.max = String(image.width - rect.x);
   inputs.height.max = String(image.height - rect.y);
-  renderHandles();
 }
 
 function renderHandles(): void {
   if (!image || !rect) return;
-  const box = selection.getBoundingClientRect();
+  // Measure the stage before writing the new selection bounds.
+  const origin = stage.getBoundingClientRect();
+  const box = {
+    x: origin.left + rect.x * scale,
+    y: origin.top + rect.y * scale,
+    width: rect.width * scale,
+    height: rect.height * scale,
+  };
   const frame = viewport.getBoundingClientRect();
   const x = Math.max(0, frame.left + viewport.clientLeft);
   const y = Math.max(0, frame.top + viewport.clientTop);
-  const positions = visibleHandles(
-    { x: box.left, y: box.top, width: box.width, height: box.height },
-    {
-      x,
-      y,
-      width:
-        Math.min(
-          innerWidth,
-          frame.left + viewport.clientLeft + viewport.clientWidth,
-        ) - x,
-      height:
-        Math.min(
-          innerHeight,
-          frame.top + viewport.clientTop + viewport.clientHeight,
-        ) - y,
-    },
-  );
+  const positions = visibleHandles(box, {
+    x,
+    y,
+    width:
+      Math.min(
+        innerWidth,
+        frame.left + viewport.clientLeft + viewport.clientWidth,
+      ) - x,
+    height:
+      Math.min(
+        innerHeight,
+        frame.top + viewport.clientTop + viewport.clientHeight,
+      ) - y,
+  });
   for (const button of handles) {
     const point = positions[button.dataset.handle as Exclude<Handle, "move">];
     button.hidden = !point;
     if (point) {
-      button.style.left = `${point.x - box.left}px`;
-      button.style.top = `${point.y - box.top}px`;
+      button.style.left = `${point.x - box.x}px`;
+      button.style.top = `${point.y - box.y}px`;
     }
   }
 }
@@ -182,7 +186,8 @@ function renderScale(): void {
   stage.style.width = `${image.width * scale}px`;
   stage.style.height = `${image.height * scale}px`;
   zoomValue.value = `${Number((scale * 100).toFixed(2))}%`;
-  renderRect();
+  // Update bounds before scrolling; position handles after the scroll settles.
+  renderRect(false);
 }
 
 function fitImage(): void {
@@ -387,17 +392,17 @@ function updateDrag(event: PointerEvent): void {
   if (drag.handle === "pan") {
     viewport.scrollLeft = drag.scroll.x - (client.x - drag.client.x);
     viewport.scrollTop = drag.scroll.y - (client.y - drag.client.y);
-    renderHandles();
     return;
   }
   const current = pointOnImage(client);
   if (Math.hypot(client.x - drag.client.x, client.y - drag.client.y) >= 3)
     drag.moved = true;
+  let next: Rect;
   if (drag.handle === "draw") {
     if (!drag.moved) return;
-    rect = drawRect(drag.start, current, image);
+    next = drawRect(drag.start, current, image);
   } else if (drag.rect) {
-    rect = adjustRect(
+    next = adjustRect(
       drag.rect,
       drag.handle,
       {
@@ -406,7 +411,9 @@ function updateDrag(event: PointerEvent): void {
       },
       image,
     );
-  }
+  } else return;
+  if (fields.every((field) => rect?.[field] === next[field])) return;
+  rect = next;
   renderRect();
 }
 
@@ -419,8 +426,8 @@ function finishDrag(cancel: boolean): void {
     viewport.scrollTo(previous.scroll.x, previous.scroll.y);
   if (viewport.hasPointerCapture(previous.pointerId))
     viewport.releasePointerCapture(previous.pointerId);
-  renderRect();
   if (fit && previous.handle !== "pan") fitImage();
+  else renderRect();
   if (cancel) status.textContent = "ドラッグを取り消しました。";
   else if (previous.handle === "pan")
     status.textContent = "表示位置を移動しました。";
@@ -557,6 +564,13 @@ template.addEventListener("input", () => {
   saveSettings(settings);
 });
 copyFeedback.addEventListener("animationend", () => {
+  // Seeking back on repeated copy can end the previous active phase in Firefox.
+  if (
+    copyFeedback
+      .getAnimations()
+      .some((animation) => animation.playState !== "finished")
+  )
+    return;
   copyFeedback.hidePopover?.();
   copyFeedback.hidden = true;
 });
