@@ -378,6 +378,62 @@ try {
         await about.getByRole("link", { name: "GitHub" }).getAttribute("href"),
         "https://github.com/1m-lcei/image-rect-picker",
       );
+      const pinboard = about.getByRole("link", { name: "ポータルサイト" });
+      assert.equal(
+        await about.locator(".about-links a").first().getAttribute("href"),
+        "https://1m-lcei.github.io/kei-pinboard/",
+      );
+      assert.equal(
+        await pinboard.getAttribute("href"),
+        "https://1m-lcei.github.io/kei-pinboard/",
+      );
+      assert.equal(await pinboard.getAttribute("target"), "_blank");
+      assert.equal(await pinboard.getAttribute("rel"), "noopener noreferrer");
+      assert.match(
+        (await pinboard.locator("svg use").getAttribute("href")) ?? "",
+        /(?:^|\/)icons\.svg#home$/,
+      );
+      const contact = about.getByRole("link", { name: "連絡先" });
+      const pinboardBox = await pinboard.boundingBox();
+      const contactBox = await contact.boundingBox();
+      assert(pinboardBox && contactBox && pinboardBox.x < contactBox.x);
+      await pinboard.focus();
+      await page.keyboard.press("Tab");
+      const tabbedToContact = await contact.evaluate(
+        (node) => node === document.activeElement,
+      );
+      // WebKit may skip links in Tab order under the host keyboard preference.
+      if (!tabbedToContact) assert.equal(name, "webkit");
+      await pinboard.evaluate((node) => {
+        node.addEventListener(
+          "click",
+          (event) => {
+            event.preventDefault();
+            document.documentElement.dataset.pinboardKeyboardActivated = "true";
+          },
+          { once: true },
+        );
+      });
+      await pinboard.focus();
+      await page.keyboard.press("Enter");
+      assert.equal(
+        await page
+          .locator("html")
+          .getAttribute("data-pinboard-keyboard-activated"),
+        "true",
+      );
+      const lightSurface = await about.evaluate(
+        (node) => getComputedStyle(node).backgroundColor,
+      );
+      await page.emulateMedia({ colorScheme: "dark" });
+      assert(await pinboard.isVisible());
+      assert.notEqual(
+        await about.evaluate((node) => getComputedStyle(node).backgroundColor),
+        lightSurface,
+      );
+      if (screenshots)
+        await page.screenshot({ path: `test-results/${name}-about-dark.png` });
+      await page.emulateMedia({ colorScheme: "light" });
       await page.waitForFunction(() =>
         [
           ...document.querySelectorAll<SVGUseElement>(".about-links svg use"),
@@ -1203,6 +1259,17 @@ try {
       if (screenshots)
         await page.screenshot({ path: `test-results/${name}-mobile-menu.png` });
       await page.locator("#about-trigger").tap();
+      const mobilePinboardBox = await pinboard.boundingBox();
+      const mobileContactBox = await contact.boundingBox();
+      assert(
+        mobilePinboardBox &&
+          mobileContactBox &&
+          mobilePinboardBox.x < mobileContactBox.x,
+      );
+      if (screenshots)
+        await page.screenshot({
+          path: `test-results/${name}-mobile-about.png`,
+        });
       await page.touchscreen.tap(1, 1);
       assert(await about.isHidden());
       await helpTrigger.tap();
