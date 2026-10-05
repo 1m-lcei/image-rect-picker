@@ -381,11 +381,11 @@ try {
       const pinboard = about.getByRole("link", { name: "ポータルサイト" });
       assert.equal(
         await about.locator(".about-links a").first().getAttribute("href"),
-        "https://1m-lcei.github.io/kei-pinboard/",
+        "https://1m-lcei.github.io/",
       );
       assert.equal(
         await pinboard.getAttribute("href"),
-        "https://1m-lcei.github.io/kei-pinboard/",
+        "https://1m-lcei.github.io/",
       );
       assert.equal(await pinboard.getAttribute("target"), "_blank");
       assert.equal(await pinboard.getAttribute("rel"), "noopener noreferrer");
