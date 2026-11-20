@@ -257,6 +257,7 @@ async function openFiles(files: FileList): Promise<void> {
         const previous = image;
         image = next;
         rect = null;
+        panMode = false;
         imageElement.src = next.url;
         imageElement.alt = next.name;
         if (previous) URL.revokeObjectURL(previous.url);
@@ -301,6 +302,7 @@ clear.addEventListener("click", () => {
   if (image) URL.revokeObjectURL(image.url);
   image = null;
   rect = null;
+  panMode = false;
   imageElement.removeAttribute("src");
   imageElement.alt = "";
   stage.hidden = true;

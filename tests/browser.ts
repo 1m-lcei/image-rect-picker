@@ -494,8 +494,13 @@ try {
         await loaded(page);
       }
       assert.equal(fileChoosers, 5);
+      await page.locator("#pan").click();
       await page.locator("#clear svg").click();
       assert(await page.locator("#empty").isVisible());
+      assert.equal(
+        await page.locator("#pan").getAttribute("aria-pressed"),
+        "false",
+      );
       assert(
         await page
           .locator("#file")
@@ -519,7 +524,13 @@ try {
       await page.locator("#pan").click();
       await dragImage(page, [10, 10], [110, 90]);
       assert(await page.locator("#selection").isHidden());
-      await page.locator("#pan").click();
+      await page.locator("#file").setInputFiles(file);
+      await loaded(page);
+      assert.equal(
+        await page.locator("#pan").getAttribute("aria-pressed"),
+        "false",
+      );
+      await page.locator("#actual-size").click();
       const unselectedStage = await page.locator("#stage").boundingBox();
       assert(unselectedStage);
       await page.mouse.click(unselectedStage.x + 10, unselectedStage.y + 10);
