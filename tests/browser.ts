@@ -193,6 +193,11 @@ try {
       }
       await nativePage.keyboard.press("Escape");
       await nativePage.locator("#help-trigger").click();
+      assert(
+        await nativePage
+          .locator("#help-dialog")
+          .evaluate((dialog) => dialog.matches(":modal")),
+      );
       await nativePage.keyboard.press("Escape");
       assert(await nativePage.locator("#help-dialog").isHidden());
       await nativePage.close();
