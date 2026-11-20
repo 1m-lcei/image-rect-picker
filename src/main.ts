@@ -77,6 +77,7 @@ let loadRequest = 0;
 let loading = false;
 let pendingFile: File | null = null;
 let readingImage = false;
+let errorSource: "image" | "coordinates" = "image";
 let panMode = false;
 let spacePressed = false;
 let drag: {
@@ -91,7 +92,11 @@ let drag: {
 
 template.value = settings.template;
 
-function showError(message: string): void {
+function showError(
+  message: string,
+  source: "image" | "coordinates" = "image",
+): void {
+  errorSource = source;
   element("error-text").textContent = message;
   errorBox.hidden = !message;
 }
@@ -498,6 +503,13 @@ document.addEventListener("keyup", (event) => {
     renderPanState();
   }
 });
+element("deselect").addEventListener("click", () => {
+  rect = null;
+  if (errorSource === "coordinates") showError("");
+  renderRect();
+  viewport.focus();
+  status.textContent = "選択を解除しました。";
+});
 panButton.addEventListener("click", () => {
   panMode = !panMode;
   renderPanState();
@@ -565,7 +577,7 @@ function commitCoordinate(field: keyof Rect): boolean {
       error instanceof Error ? error.message : "整数を入力してください。";
     input.setCustomValidity(message);
     input.setAttribute("aria-invalid", "true");
-    showError(message);
+    showError(message, "coordinates");
     return false;
   }
   editedFields.delete(field);

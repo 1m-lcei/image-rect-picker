@@ -216,12 +216,12 @@
     margin-block-end: 0.4rem;
   }
   #coordinates {
-    flex: 1 1 26rem;
+    flex: 1 1 32rem;
     max-inline-size: 44rem;
   }
   .coordinate-inputs {
     display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(4, minmax(0, 1fr)) auto;
     gap: 0.65rem;
   }
   .coordinate-inputs label {
@@ -276,6 +276,9 @@
     }
     .coordinate-inputs {
       grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    #deselect {
+      justify-self: start;
     }
     .controls {
       align-items: stretch;
@@ -342,6 +345,7 @@
     }
   }
   #coordinates input,
+  #deselect,
   .zoom-buttons > button,
   #zoom-value {
     block-size: 2.5rem;

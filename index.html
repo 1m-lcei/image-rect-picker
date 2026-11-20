@@ -73,6 +73,7 @@
             <label for="y">Y<input id="y" type="number" step="1" min="0" inputmode="numeric" required /></label>
             <label for="width">幅<input id="width" type="number" step="1" min="1" inputmode="numeric" required /></label>
             <label for="height">高さ<input id="height" type="number" step="1" min="1" inputmode="numeric" required /></label>
+            <button id="deselect" type="button">選択を解除</button>
           </div>
         </fieldset>
         <fieldset id="zoom-controls" disabled>
@@ -143,6 +144,7 @@
       <dl id="interaction-hint" class="guide-steps">
         <dt>画像を開く</dt><dd>上の画像選択欄をクリックするか、画像表示領域へ画像をドロップします。</dd>
         <dt>範囲を選ぶ</dt><dd>画像上をドラッグして作成。未選択のときは画像表示領域にフォーカスしてEnterでも作成できます。枠内で移動、四辺のハンドルでサイズを調整できます。数値入力でも変更できます。</dd>
+        <dt>選択を解除</dt><dd>座標欄の「選択を解除」を押すと、画像と表示倍率を保ったまま範囲を選び直せます。</dd>
         <dt>微調整</dt><dd>枠やハンドルにフォーカスして矢印キーで1px、Shift＋矢印キーで10px調整できます。</dd>
         <dt>拡大・移動</dt><dd>ホイールで拡大・縮小。<svg class="inline-icon" aria-hidden="true"><use href="/icons.svg#pan" /></svg>ボタンを有効にしてドラッグするとパン（表示位置を移動）できます。Space＋ドラッグ / マウスの中ボタンドラッグでもパンできます。</dd>
         <dt>座標をコピー</dt><dd>出力欄の<svg class="inline-icon" aria-hidden="true"><use href="/icons.svg#copy" /></svg>ボタンを押します。出力テンプレートには {x} {y} {width} {height} {x2} {y2} を使えます。</dd>

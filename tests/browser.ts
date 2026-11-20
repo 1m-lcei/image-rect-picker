@@ -627,6 +627,35 @@ try {
       await dragImage(page, [170, 115], [180, 125]);
       assert.deepEqual(await values(page), [130, 66, 200, 120]);
 
+      const deselect = page.getByRole("button", { name: "選択を解除" });
+      await setValues(page, [0, 0, 640, 480]);
+      assert.deepEqual(await values(page), [0, 0, 640, 480]);
+      await page.locator("#width").fill("1.5");
+      await page.locator("#width").press("Enter");
+      assert(await page.locator("#error").isVisible());
+      const imageUrl = await page.locator("#image").getAttribute("src");
+      await deselect.click();
+      assert(await deselect.isDisabled());
+      assert(await page.locator("#selection").isHidden());
+      assert(await page.locator("#error").isHidden());
+      assert.equal(await page.locator("#width").inputValue(), "");
+      assert.equal(await page.locator("#output").inputValue(), "");
+      assert(await page.locator("#copy").isDisabled());
+      assert.equal(await page.locator("#image").getAttribute("src"), imageUrl);
+      assert.equal(await page.locator("#zoom-value").textContent(), "100%");
+      await dragImage(page, [10, 10], [110, 90]);
+      assert.deepEqual(await values(page), [10, 10, 100, 80]);
+
+      await page.locator("#height").focus();
+      await page.keyboard.press("Tab");
+      assert(
+        await deselect.evaluate((node) => node === document.activeElement),
+      );
+      await page.keyboard.press("Space");
+      assert(await page.locator("#selection").isHidden());
+      await page.keyboard.press("Enter");
+      assert.deepEqual(await values(page), [160, 120, 320, 240]);
+
       await dragImage(page, [10, 10], [110, 90]);
       assert.deepEqual(await values(page), [10, 10, 100, 80]);
       await dragImage(page, [220, 160], [150, 110]);
@@ -1374,6 +1403,10 @@ try {
       await page.locator("#actual-size").tap();
       await page.locator("#fit").tap();
       await page.locator("#viewport").press("Enter");
+      await deselect.tap();
+      assert(await page.locator("#selection").isHidden());
+      await page.keyboard.press("Enter");
+      assert(await page.locator("#selection").isVisible());
       // Touch hover must not make a disabled pan mode look enabled.
       const pan = page.locator("#pan");
       const panBackground = await pan.evaluate(
