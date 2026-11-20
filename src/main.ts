@@ -111,6 +111,11 @@ function renderOutput(): void {
   copy.disabled = !output.value;
 }
 
+function clearCoordinateEdits(): void {
+  editedFields.clear();
+  if (errorSource === "coordinates") showError("");
+}
+
 function renderRect(updateHandles = true): void {
   if (updateHandles) renderHandles();
   coordinates.disabled = !rect || !!drag;
@@ -119,7 +124,7 @@ function renderRect(updateHandles = true): void {
   selection.hidden = !rect;
   renderPanState();
   renderOutput();
-  if (!rect) editedFields.clear();
+  if (!rect) clearCoordinateEdits();
   for (const field of fields) {
     if (editedFields.has(field)) continue;
     const input = inputs[field];
@@ -440,6 +445,7 @@ function finishDrag(cancel: boolean): void {
   const previous = drag;
   drag = null;
   if (cancel) rect = previous.rect;
+  else if (previous.handle === "draw" && previous.moved) clearCoordinateEdits();
   if (cancel && previous.handle === "pan")
     viewport.scrollTo(previous.scroll.x, previous.scroll.y);
   if (viewport.hasPointerCapture(previous.pointerId))
@@ -505,7 +511,6 @@ document.addEventListener("keyup", (event) => {
 });
 element("deselect").addEventListener("click", () => {
   rect = null;
-  if (errorSource === "coordinates") showError("");
   renderRect();
   viewport.focus();
   status.textContent = "選択を解除しました。";

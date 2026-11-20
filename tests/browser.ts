@@ -656,8 +656,13 @@ try {
       await page.keyboard.press("Enter");
       assert.deepEqual(await values(page), [160, 120, 320, 240]);
 
+      await page.locator("#x").fill("0.5");
+      await page.locator("#x").press("Enter");
+      assert(await page.locator("#error").isVisible());
       await dragImage(page, [10, 10], [110, 90]);
       assert.deepEqual(await values(page), [10, 10, 100, 80]);
+      assert(await page.locator("#error").isHidden());
+      assert.equal(await page.locator("#x").getAttribute("aria-invalid"), null);
       await dragImage(page, [220, 160], [150, 110]);
       assert.deepEqual(await values(page), [150, 110, 70, 50]);
       await dragImage(page, [30, 30], [30, 30]);
