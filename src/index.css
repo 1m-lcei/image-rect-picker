@@ -741,19 +741,32 @@
   }
   .handle {
     position: absolute;
-    inline-size: 28px;
-    block-size: 28px;
     border: 0;
     background: transparent;
-    translate: -50% -50%;
+  }
+  /* Keep the center of small selections available for moving the rectangle. */
+  .north,
+  .south {
+    inline-size: min(28px, max(10px, 50%));
+    block-size: calc(14px + min(14px, 25%));
+  }
+  .west,
+  .east {
+    inline-size: calc(14px + min(14px, 25%));
+    block-size: min(28px, max(10px, 50%));
   }
   .handle::after {
     content: "";
+    box-sizing: border-box;
     position: absolute;
-    inset: 9px;
+    inset: 50% auto auto 50%;
+    inline-size: 10px;
+    block-size: 10px;
+    translate: -50% -50%;
     background: #fff;
     border: 2px solid #2563eb;
     border-radius: 2px;
+    pointer-events: none;
   }
   .handle:hover::after {
     background: #bfdbfe;
@@ -762,21 +775,37 @@
     left: 50%;
     top: 0;
     cursor: n-resize;
+    translate: -50% -14px;
+  }
+  .north::after {
+    top: min(14px, 100% - 5px);
   }
   .south {
     left: 50%;
     top: 100%;
     cursor: s-resize;
+    translate: -50% calc(14px - 100%);
+  }
+  .south::after {
+    top: max(5px, 100% - 14px);
   }
   .west {
     left: 0;
     top: 50%;
     cursor: w-resize;
+    translate: -14px -50%;
+  }
+  .west::after {
+    left: min(14px, 100% - 5px);
   }
   .east {
     left: 100%;
     top: 50%;
     cursor: e-resize;
+    translate: calc(14px - 100%) -50%;
+  }
+  .east::after {
+    left: max(5px, 100% - 14px);
   }
   #viewport.pan-ready {
     touch-action: none;

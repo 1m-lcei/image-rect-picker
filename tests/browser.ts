@@ -638,6 +638,38 @@ try {
       await dragImage(page, [170, 145], [190, 145]);
       assert.deepEqual(await values(page), [190, 120, 50, 50]);
 
+      // Small selections leave room to move and to grab each edge.
+      await setValues(page, [190, 120, 8, 8]);
+      await dragImage(page, [194, 124], [204, 134]);
+      assert.deepEqual(await values(page), [200, 130, 8, 8]);
+      for (const [from, to, expected] of [
+        [
+          [204, 130],
+          [204, 120],
+          [200, 120, 8, 18],
+        ],
+        [
+          [204, 138],
+          [204, 148],
+          [200, 130, 8, 18],
+        ],
+        [
+          [200, 134],
+          [190, 134],
+          [190, 130, 18, 8],
+        ],
+        [
+          [208, 134],
+          [218, 134],
+          [200, 130, 18, 8],
+        ],
+      ] as const) {
+        await dragImage(page, [...from], [...to]);
+        assert.deepEqual(await values(page), [...expected]);
+        await setValues(page, [200, 130, 8, 8]);
+      }
+      await setValues(page, [190, 120, 50, 50]);
+
       // Real pointer capture, followed by cancellation and Escape.
       for (const cancel of ["pointercancel", "Escape"]) {
         const before = await values(page);
