@@ -1,15 +1,17 @@
-import { type Settings, saveSettings } from "./settings";
+import { type Settings, saveTheme } from "./settings";
 
-export function initTheme(toggle: HTMLButtonElement, settings: Settings): void {
+export function initTheme(
+  toggle: HTMLButtonElement,
+  theme: Settings["theme"],
+): void {
   const system = matchMedia("(prefers-color-scheme: dark)");
   const choices = document.querySelectorAll<HTMLInputElement>(
     'input[name="theme"]',
   );
   for (const choice of choices) {
-    choice.checked = choice.value === settings.theme;
+    choice.checked = choice.value === theme;
     choice.addEventListener("change", () => {
-      settings.theme = choice.value as Settings["theme"];
-      saveSettings(settings);
+      saveTheme(choice.value as Settings["theme"]);
     });
   }
   toggle.addEventListener("click", () => {
@@ -20,8 +22,7 @@ export function initTheme(toggle: HTMLButtonElement, settings: Settings): void {
     const value =
       next === (system.matches ? "dark" : "light") ? "system" : next;
     for (const choice of choices) choice.checked = choice.value === value;
-    settings.theme = value;
-    saveSettings(settings);
+    saveTheme(value);
   });
   toggle.hidden = false;
 }

@@ -13,7 +13,7 @@ import {
 } from "./geometry";
 import { type LoadedImage, loadImage } from "./image";
 import { formatRect } from "./output";
-import { loadSettings, saveSettings } from "./settings";
+import { loadSettings, saveTemplate } from "./settings";
 import { initTheme } from "./theme";
 
 function element<T extends HTMLElement>(id: string): T {
@@ -46,8 +46,7 @@ const panButton = element<HTMLButtonElement>("pan");
 const handles = selection.querySelectorAll<HTMLButtonElement>(".handle");
 
 const settings = loadSettings();
-initTheme(element<HTMLButtonElement>("theme-toggle"), settings);
-saveSettings(settings);
+initTheme(element<HTMLButtonElement>("theme-toggle"), settings.theme);
 
 const menuTrigger = element<HTMLButtonElement>("menu-trigger");
 element("about-dialog").addEventListener("close", () => menuTrigger.focus());
@@ -562,8 +561,7 @@ for (const field of fields) {
 
 template.addEventListener("input", () => {
   output.value = formatRect(rect, template.value);
-  settings.template = template.value;
-  saveSettings(settings);
+  saveTemplate(template.value);
 });
 copyFeedback.addEventListener("animationend", () => {
   // Seeking back on repeated copy can end the previous active phase in Firefox.

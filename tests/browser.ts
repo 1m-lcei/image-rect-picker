@@ -281,7 +281,7 @@ try {
             localStorage.getItem("image-rect-picker.settings") ?? "null",
           ),
         );
-      assert.deepEqual(await storedSettings(), { version: 1, theme: "system" });
+      assert.equal(await storedSettings(), null);
       await themeToggle.click();
       for (const template of ["{x},{y},{width},{height}", ""]) {
         await page.locator("#template").fill(template);
@@ -290,12 +290,44 @@ try {
         assert.equal(await page.locator("#template").inputValue(), template);
         assert.deepEqual(await storedSettings(), {
           version: 1,
-          theme: "dark",
           template,
         });
       }
-      await page.locator("#template").fill("{width}x{height}+{x}+{y}");
-      assert.deepEqual(await storedSettings(), { version: 1, theme: "dark" });
+      const otherTab = await context.newPage();
+      await otherTab.goto(origin);
+      await page.locator("#template").fill("{x},{y}");
+      await otherTab.locator("#theme-toggle").click();
+      await page.reload();
+      await checkTheme("system", "moon");
+      assert.equal(await page.locator("#template").inputValue(), "{x},{y}");
+      await Promise.all([
+        page.locator("#template").fill("{width}x{height}+{x}+{y}"),
+        otherTab.locator("#theme-toggle").click(),
+      ]);
+      await otherTab.close();
+      await page.reload();
+      await checkTheme("dark", "sun");
+      assert.deepEqual(await storedSettings(), { version: 1 });
+
+      // A v1 install can edit its template before changing its old theme.
+      await page.evaluate(() => {
+        localStorage.clear();
+        localStorage.setItem(
+          "image-rect-picker.settings",
+          JSON.stringify({
+            version: 1,
+            theme: "dark",
+            template: "{x2},{y2}",
+          }),
+        );
+      });
+      await page.reload();
+      await checkTheme("dark", "sun");
+      assert.equal(await page.locator("#template").inputValue(), "{x2},{y2}");
+      await page.locator("#template").fill("{height}");
+      await page.reload();
+      await checkTheme("dark", "sun");
+      assert.equal(await page.locator("#template").inputValue(), "{height}");
       for (const saved of [
         "broken JSON",
         "null",
@@ -330,7 +362,12 @@ try {
       await menuTrigger.click();
       await page.getByRole("radio", { name: "ライト", exact: true }).check();
       await checkTheme("light", "moon");
-      assert.deepEqual(await storedSettings(), { version: 1, theme: "light" });
+      assert.equal(
+        await page.evaluate(() =>
+          localStorage.getItem("image-rect-picker.theme.v1"),
+        ),
+        "light",
+      );
       await page.emulateMedia({ colorScheme: "dark" });
       await checkTheme("light", "moon");
       await page.getByRole("radio", { name: "ダーク", exact: true }).check();
