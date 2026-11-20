@@ -1180,11 +1180,40 @@ try {
       await blockedPage.close();
 
       // Large image: scrolling and zooming must not change original coordinates.
-      const large = await imageFile(page, 2400, 1800);
+      const large = await imageFile(page, 3200, 2400);
+      await page.setViewportSize({ width: 1440, height: 850 });
       await page.locator("#file").setInputFiles(large);
       await loaded(page);
-      await page.locator("#viewport").press("Enter");
       await page.locator("#actual-size").click();
+      await page.locator("#viewport").evaluate((node) => node.scrollTo(0, 0));
+      assert(
+        await page
+          .locator("#viewport")
+          .evaluate((node) => node.clientHeight < 600),
+        "The default rectangle starts below the viewport",
+      );
+      await page.locator("#viewport").press("Enter");
+      assert.deepEqual(await values(page), [800, 600, 1600, 1200]);
+      assert(
+        await page.locator("#viewport").evaluate((node) => {
+          const move = node.querySelector("#move:focus-visible");
+          if (!move) return false;
+          const box = move.getBoundingClientRect();
+          const frame = node.getBoundingClientRect();
+          const top = frame.top + node.clientTop;
+          const bottom = Math.min(top + node.clientHeight, innerHeight);
+          const left = frame.left + node.clientLeft;
+          const right = Math.min(left + node.clientWidth, innerWidth);
+          return (
+            box.top > Math.max(top, 0) &&
+            box.top < bottom &&
+            box.left < right &&
+            box.right > Math.max(left, 0)
+          );
+        }),
+        "The initial selection has a focused edge inside the viewport",
+      );
+      await page.setViewportSize({ width: 1440, height: 1000 });
       await setValues(page, [300, 250, 400, 300]);
       await page.locator("#viewport").evaluate((node) => {
         node.scrollLeft = 200;

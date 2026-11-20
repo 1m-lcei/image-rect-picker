@@ -135,20 +135,11 @@ function renderRect(updateHandles = true): void {
   inputs.height.max = String(image.height - rect.y);
 }
 
-function renderHandles(): void {
-  if (!image || !rect) return;
-  // Measure the stage before writing the new selection bounds.
-  const origin = stage.getBoundingClientRect();
-  const box = {
-    x: origin.left + rect.x * scale,
-    y: origin.top + rect.y * scale,
-    width: rect.width * scale,
-    height: rect.height * scale,
-  };
+function visibleViewport(): Rect {
   const frame = viewport.getBoundingClientRect();
   const x = Math.max(0, frame.left + viewport.clientLeft);
   const y = Math.max(0, frame.top + viewport.clientTop);
-  const positions = visibleHandles(box, {
+  return {
     x,
     y,
     width:
@@ -161,7 +152,20 @@ function renderHandles(): void {
         innerHeight,
         frame.top + viewport.clientTop + viewport.clientHeight,
       ) - y,
-  });
+  };
+}
+
+function renderHandles(): void {
+  if (!image || !rect) return;
+  // Measure the stage before writing the new selection bounds.
+  const origin = stage.getBoundingClientRect();
+  const box = {
+    x: origin.left + rect.x * scale,
+    y: origin.top + rect.y * scale,
+    width: rect.width * scale,
+    height: rect.height * scale,
+  };
+  const positions = visibleHandles(box, visibleViewport());
   for (const button of handles) {
     const point = positions[button.dataset.handle as Exclude<Handle, "move">];
     button.hidden = !point;
@@ -514,6 +518,15 @@ viewport.addEventListener("keydown", (event) => {
   event.preventDefault();
   rect = initialRect(image);
   renderRect();
+  if ([...handles].every((button) => button.hidden)) {
+    const frame = visibleViewport();
+    const box = selection.getBoundingClientRect();
+    viewport.scrollBy(
+      box.left - frame.x - Math.min(14, frame.width / 2),
+      box.top - frame.y - Math.min(14, frame.height / 2),
+    );
+    renderHandles();
+  }
   element("move").focus({ preventScroll: true });
   announceRect();
 });
