@@ -616,6 +616,17 @@ try {
       await page.locator("#x").fill("42");
       await page.locator("#x").press("Enter");
 
+      await page.locator("#x").fill("35");
+      await dragImage(page, [10, 10], [10, 10]);
+      assert.deepEqual(await values(page), [35, 41, 200, 120]);
+      await page.locator("#x").fill("100");
+      await dragImage(page, [150, 100], [170, 115]);
+      assert.deepEqual(await values(page), [120, 56, 200, 120]);
+      await page.locator("#x").fill("99");
+      await page.locator("#x").fill("120");
+      await dragImage(page, [170, 115], [180, 125]);
+      assert.deepEqual(await values(page), [130, 66, 200, 120]);
+
       await dragImage(page, [10, 10], [110, 90]);
       assert.deepEqual(await values(page), [10, 10, 100, 80]);
       await dragImage(page, [220, 160], [150, 110]);
@@ -699,17 +710,51 @@ try {
           configurable: true,
           value: {
             writeText: async (text: string) => {
+              if (document.body.hasAttribute("data-deny-copy"))
+                throw new Error("Denied");
               document.body.dataset.copied = text;
             },
           },
         });
       });
+      const x = page.locator("#x");
+      const copiedText = () => page.locator("body").getAttribute("data-copied");
+      for (const value of ["0.5", "", "-"]) {
+        if (value === "-") {
+          await x.fill("");
+          await x.press("-");
+          assert(
+            await x.evaluate(
+              (input: HTMLInputElement) => input.validity.badInput,
+            ),
+          );
+        } else await x.fill(value);
+        await page.locator("#copy").click();
+        assert.equal(await copiedText(), null);
+        assert.equal(await x.getAttribute("aria-invalid"), "true");
+      }
+      // Another edit and a zoom redraw must preserve the invalid coordinate.
+      await page.locator("#y").fill("121");
+      await page.locator("#y").press("Enter");
+      await page.locator("#actual-size").click();
       await page.locator("#copy").click();
-      await page.waitForFunction(
-        () => document.body.dataset.copied !== undefined,
-      );
+      assert.equal(await copiedText(), null);
+      await page.locator("#y").fill("120");
+      await x.fill("191");
+      await page.locator("#copy").click();
+      const corrected = "191,120,50,50,241,170,191,<b>{unknown}</b>";
+      assert.equal(await copiedText(), corrected);
+      const template = page.locator("#template");
+      const previousTemplate = await template.inputValue();
+      await template.fill("");
+      assert(await page.locator("#copy").isDisabled());
+      await page.locator("#copy").click({ force: true });
+      assert.equal(await copiedText(), corrected);
+      await template.fill(previousTemplate);
+      await x.fill("190");
+      await page.locator("#copy").click();
       assert.equal(
-        await page.locator("body").getAttribute("data-copied"),
+        await copiedText(),
         await page.locator("#output").inputValue(),
       );
       const copyFeedback = page.locator("#copy-feedback");
@@ -799,16 +844,9 @@ try {
       await page.emulateMedia({ reducedMotion: "no-preference" });
       await page.locator("#copy").click();
       await copyFeedback.waitFor({ state: "visible" });
-      await page.evaluate(() => {
-        Object.defineProperty(navigator, "clipboard", {
-          configurable: true,
-          value: {
-            writeText: async () => {
-              throw new Error("Denied");
-            },
-          },
-        });
-      });
+      await page.evaluate(() =>
+        document.body.setAttribute("data-deny-copy", ""),
+      );
       await page.locator("#copy").click();
       await page.waitForFunction(() => document.activeElement?.id === "output");
       assert(
@@ -821,6 +859,15 @@ try {
           .evaluate((node) => (node as HTMLInputElement).selectionEnd),
         (await page.locator("#output").inputValue()).length,
       );
+      const status = page.locator("#status[role=status]");
+      assert(
+        (await status.textContent())?.includes("自動コピーできませんでした"),
+      );
+      await page.evaluate(() =>
+        document.body.removeAttribute("data-deny-copy"),
+      );
+      await page.locator("#copy").click();
+      assert.equal(await status.textContent(), "コピーしました");
 
       for (const invalid of [
         {

@@ -70,6 +70,7 @@ if (!("closedBy" in HTMLDialogElement.prototype)) {
 
 let image: LoadedImage | null = null;
 let rect: Rect | null = null;
+const editedFields = new Set<keyof Rect>();
 let scale = 1;
 let fit = true;
 let loadRequest = 0;
@@ -100,16 +101,22 @@ function announceRect(): void {
     status.textContent = `選択範囲: X ${rect.x}、Y ${rect.y}、幅 ${rect.width}、高さ ${rect.height} px。`;
 }
 
+function renderOutput(): void {
+  output.value = formatRect(rect, template.value);
+  copy.disabled = !output.value;
+}
+
 function renderRect(updateHandles = true): void {
   if (updateHandles) renderHandles();
   coordinates.disabled = !rect || !!drag;
   zoomControls.disabled = !image || !!drag;
   clear.disabled = !image && !loading;
-  copy.disabled = !rect;
   selection.hidden = !rect;
   renderPanState();
-  output.value = formatRect(rect, template.value);
+  renderOutput();
+  if (!rect) editedFields.clear();
   for (const field of fields) {
+    if (editedFields.has(field)) continue;
     const input = inputs[field];
     input.value = rect ? String(rect[field]) : "";
     input.setCustomValidity("");
@@ -370,6 +377,8 @@ viewport.addEventListener("pointerdown", (event) => {
     return;
   event.preventDefault();
   const button = handleFrom(event.target);
+  // Leaving a coordinate field commits it before the drag snapshots the rect.
+  (panning ? viewport : (button ?? viewport)).focus({ preventScroll: true });
   const client = { x: event.clientX, y: event.clientY };
   drag = {
     pointerId: event.pointerId,
@@ -382,7 +391,6 @@ viewport.addEventListener("pointerdown", (event) => {
     scroll: { x: viewport.scrollLeft, y: viewport.scrollTop },
     moved: false,
   };
-  (panning ? viewport : (button ?? viewport)).focus({ preventScroll: true });
   viewport.setPointerCapture(event.pointerId);
   renderRect();
 });
@@ -529,38 +537,54 @@ stage.addEventListener("keydown", (event) => {
   announceRect();
 });
 
+function commitCoordinate(field: keyof Rect): boolean {
+  if (!rect || !image || drag) return false;
+  const input = inputs[field];
+  try {
+    rect = editRect(
+      rect,
+      field,
+      input.validity.badInput ? "" : input.value,
+      image,
+    );
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "整数を入力してください。";
+    input.setCustomValidity(message);
+    input.setAttribute("aria-invalid", "true");
+    showError(message);
+    return false;
+  }
+  editedFields.delete(field);
+  if (!editedFields.size) showError("");
+  renderRect();
+  announceRect();
+  return true;
+}
+
 for (const field of fields) {
   const input = inputs[field];
-  const commit = () => {
-    if (!rect || !image || drag) return;
-    try {
-      rect = editRect(rect, field, input.value, image);
-      showError("");
-      renderRect();
-      announceRect();
-    } catch (error) {
-      const message =
-        error instanceof Error ? error.message : "整数を入力してください。";
-      input.setCustomValidity(message);
-      input.setAttribute("aria-invalid", "true");
-      showError(message);
-    }
-  };
-  input.addEventListener("change", commit);
+  input.addEventListener("change", () => commitCoordinate(field));
+  input.addEventListener("blur", () => {
+    // Restoring the original value while typing can leave without a change event.
+    if (editedFields.has(field) && !input.validity.customError)
+      commitCoordinate(field);
+  });
   input.addEventListener("keydown", (event) => {
     if (event.key === "Enter") {
       event.preventDefault();
-      commit();
+      commitCoordinate(field);
     }
   });
   input.addEventListener("input", () => {
+    editedFields.add(field);
     input.setCustomValidity("");
     input.removeAttribute("aria-invalid");
   });
 }
 
 template.addEventListener("input", () => {
-  output.value = formatRect(rect, template.value);
+  renderOutput();
   saveTemplate(template.value);
 });
 copyFeedback.addEventListener("animationend", () => {
@@ -575,11 +599,16 @@ copyFeedback.addEventListener("animationend", () => {
   copyFeedback.hidden = true;
 });
 copy.addEventListener("click", async () => {
-  const text = output.value;
   copyFeedback.hidePopover?.();
   copyFeedback.hidden = true;
+  for (const field of editedFields) {
+    if (!commitCoordinate(field)) return;
+  }
+  const text = output.value;
+  if (!text) return;
   try {
     await navigator.clipboard.writeText(text);
+    status.textContent = copyFeedback.textContent;
     copyFeedback.hidden = false;
     copyFeedback.showPopover?.();
     for (const animation of copyFeedback.getAnimations())
